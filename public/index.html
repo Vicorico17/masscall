@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Masscall · command center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">m</span><span>masscall</span></div>
+    <div class="workspace"><span class="workspace-dot"></span><span>Acme workspace</span><button class="chevron">⌄</button></div>
+    <nav><div class="nav-label">WORKSPACE</div><a class="active" href="#"><span>⌁</span> Command center</a><a href="#"><span>◌</span> Activity</a><a href="#"><span>⌘</span> Automations <b>3</b></a><div class="nav-label second">MANAGE</div><a href="#"><span>◈</span> Connections</a><a href="#"><span>⚙</span> Settings</a></nav>
+    <div class="sidebar-bottom"><div class="mini-avatar">AK</div><div><strong>Alex Kim</strong><small>Free workspace</small></div><button class="more">•••</button></div>
+  </aside>
+  <main>
+    <header class="topbar"><div><p class="eyebrow">COMMAND CENTER</p><h1>Make it happen.</h1></div><div class="top-actions"><span class="live-status"><i></i><span id="statusText">Demo mode</span></span><button class="icon-btn" aria-label="Notifications">♧</button><div class="avatar">AK</div></div></header>
+    <section class="hero-grid">
+      <div class="command-panel">
+        <div class="panel-kicker"><span class="pulse-ring">✦</span><span>Ask anything</span><span class="model-pill">GPT-LIVE-1</span></div>
+        <h2>What should we<br /><em>take care of?</em></h2>
+        <form id="commandForm"><textarea id="commandInput" rows="2" placeholder="Try “Schedule a 30 min sync with the product team tomorrow”"></textarea><div class="composer-footer"><div class="suggestions"><button type="button" data-command="Schedule a team sync tomorrow">+ Add context</button><span>⌘ ↵ to run</span></div><button class="run-btn" type="submit"><span>Run command</span><span class="arrow">↗</span></button></div></form>
+        <div class="quick-label">QUICK COMMANDS</div><div class="quick-grid"><button data-command="Schedule a team sync tomorrow"><span class="app-icon blue">◫</span><span>Schedule a meeting</span><span>↗</span></button><button data-command="Draft a follow-up email to the team"><span class="app-icon red">✉</span><span>Draft an email</span><span>↗</span></button><button data-command="Send a message in the launch channel"><span class="app-icon purple">#</span><span>Send a Slack message</span><span>↗</span></button><button data-command="Create a project brief in Notion"><span class="app-icon dark">N</span><span>Create a Notion page</span><span>↗</span></button></div>
+      </div>
+      <div class="side-column"><div class="info-card"><div class="info-top"><div class="ai-symbol">✦</div><span>POWERED BY <strong>GPT-LIVE-1</strong></span></div><p>One command. Every tool.<br />Your work, moving forward.</p><div class="tool-row"><span class="tiny-icon blue">◫</span><span class="tiny-icon red">✉</span><span class="tiny-icon purple">#</span><span class="tiny-icon dark">N</span><span class="tiny-icon teal">+</span><span class="tool-count">12 connected apps</span></div></div><div class="connected"><div class="section-head"><span>CONNECTED APPS</span><button>Manage <span>↗</span></button></div><div class="app-line"><span class="app-icon blue">◫</span><div><strong>Google Calendar</strong><small>Ready to use</small></div><i class="ready"></i></div><div class="app-line"><span class="app-icon red">✉</span><div><strong>Gmail</strong><small>Ready to use</small></div><i class="ready"></i></div><div class="app-line"><span class="app-icon purple">#</span><div><strong>Slack</strong><small>Ready to use</small></div><i class="ready"></i></div></div></div>
+    </section>
+    <section class="activity-section"><div class="section-head"><div><p class="eyebrow">RECENT ACTIVITY</p><h3>What’s been happening</h3></div><button class="view-all">View all <span>↗</span></button></div><div class="activity-list" id="activityList"><div class="activity-item"><span class="app-icon blue">◫</span><div class="activity-copy"><strong>Weekly product sync scheduled</strong><span>Google Calendar · Today at 9:42 AM</span></div><span class="success">Completed</span><span class="activity-arrow">↗</span></div><div class="activity-item"><span class="app-icon red">✉</span><div class="activity-copy"><strong>Follow-up draft created for launch team</strong><span>Gmail · Yesterday at 4:18 PM</span></div><span class="success">Completed</span><span class="activity-arrow">↗</span></div><div class="activity-item"><span class="app-icon purple">#</span><div class="activity-copy"><strong>Launch update sent to #general</strong><span>Slack · Yesterday at 2:05 PM</span></div><span class="success">Completed</span><span class="activity-arrow">↗</span></div></div></section>
+    <footer><span>Masscall is in private beta</span><span>Built for teams who move fast <b>✦</b></span></footer>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
