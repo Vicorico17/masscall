@@ -2,6 +2,21 @@ const form = document.querySelector('#commandForm');
 const input = document.querySelector('#commandInput');
 const list = document.querySelector('#activityList');
 const statusText = document.querySelector('#statusText');
+const commandView = document.querySelector('#commandView');
+const ideasView = document.querySelector('#ideasView');
+const pageEyebrow = document.querySelector('#pageEyebrow');
+const pageTitle = document.querySelector('#pageTitle');
+
+document.querySelectorAll('[data-view]').forEach(link => link.addEventListener('click', event => {
+  event.preventDefault();
+  const ideas = link.dataset.view === 'ideas';
+  document.querySelectorAll('[data-view]').forEach(item => item.classList.toggle('active', item === link));
+  commandView.hidden = ideas;
+  ideasView.hidden = !ideas;
+  pageEyebrow.textContent = ideas ? 'STARTUP IDEAS' : 'COMMAND CENTER';
+  pageTitle.textContent = ideas ? 'Build something people need.' : 'Make it happen.';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}));
 
 document.querySelectorAll('[data-command]').forEach(button => button.addEventListener('click', () => { input.value = button.dataset.command; input.focus(); }));
 input.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') form.requestSubmit(); });

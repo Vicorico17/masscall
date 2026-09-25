@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/*.js", "use": "@vercel/node" },
+    { "src": "public/**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/config", "dest": "/api/config.js" },
+    { "src": "/api/telephony", "dest": "/api/telephony.js" },
+    { "src": "/api/demo", "dest": "/api/demo.js" },
+    { "src": "/api/studio", "dest": "/api/studio.js" },
+    { "src": "/", "dest": "/public/demo.html", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY" } },
+    { "src": "/dashboard", "dest": "/public/dashboard.html", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY" } },
+    { "src": "/studio", "dest": "/public/studio.html", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY" } },
+    { "src": "/(.*)", "dest": "/public/$1", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY" } }
+  ]
+}
