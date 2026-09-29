@@ -8,6 +8,10 @@ test('stream signature accepts Twilio WebSocket URL with trailing slash',()=>{
  const token='twilio-test-token',url='https://masscall.onrender.com/media/';
  assert.equal(verifyStreamSignature('wss://masscall.onrender.com/media',token,sign(url,token)),true);
 });
+test('stream signature accepts the original WSS scheme used by the TwiML URL',()=>{
+ const token='twilio-test-token',url='wss://masscall.onrender.com/media/';
+ assert.equal(verifyStreamSignature('wss://masscall.onrender.com/media',token,sign(url,token)),true);
+});
 test('stream signature still accepts canonical URL without trailing slash',()=>{
  const token='twilio-test-token',url='https://masscall.onrender.com/media';
  assert.equal(verifyStreamSignature('wss://masscall.onrender.com/media',token,sign(url,token)),true);
