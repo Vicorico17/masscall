@@ -4,7 +4,8 @@ import {createHmac} from 'node:crypto';
 import WebSocket,{WebSocketServer} from 'ws';
 import {equal} from '../lib/telephony.js';
 const required=['OPENAI_API_KEY','VOICE_BRIDGE_SECRET','VOICE_BRIDGE_URL','TWILIO_AUTH_TOKEN','TWILIO_ACCOUNT_SID'];
-if(required.some(key=>!process.env[key]))throw new Error('Configure all bridge environment variables before starting.');
+const missing=required.filter(key=>!process.env[key]?.trim());
+if(missing.length)throw new Error(`Missing bridge environment variables: ${missing.join(', ')}`);
 const server=http.createServer((req,res)=>{res.writeHead(req.url==='/health'?200:404,{'Content-Type':'application/json'});res.end(JSON.stringify({status:req.url==='/health'?'ok':'not-found'}))});
 const sockets=new WebSocketServer({noServer:true,maxPayload:65536});
 // Validate the externally visible upgrade URL, not an untrusted Host header.
