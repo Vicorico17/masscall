@@ -3,6 +3,7 @@ import http from 'node:http';
 import {createHmac} from 'node:crypto';
 import WebSocket,{WebSocketServer} from 'ws';
 import {equal} from '../lib/telephony.js';
+import {verifyStreamSignature} from '../lib/twilio-stream-signature.js';
 const required=['OPENAI_API_KEY','VOICE_BRIDGE_SECRET','VOICE_BRIDGE_URL','TWILIO_AUTH_TOKEN','TWILIO_ACCOUNT_SID'];
 const missing=required.filter(key=>!process.env[key]?.trim());
 if(missing.length)throw new Error(`Missing bridge environment variables: ${missing.join(', ')}`);
@@ -33,9 +34,8 @@ const sockets=new WebSocketServer({noServer:true,maxPayload:65536});
 // Validate the externally visible upgrade URL, not an untrusted Host header.
 server.on('upgrade',(req,socket,head)=>{
  const canonical=new URL(process.env.VOICE_BRIDGE_URL);const validPath=req.url===canonical.pathname;
- const signedURL=canonical.href.replace(/^wss:/,'https:');
- const expected=createHmac('sha1',process.env.TWILIO_AUTH_TOKEN).update(signedURL).digest('base64');
- if(!validPath||!equal(req.headers['x-twilio-signature'],expected)){log('bridge.upgrade_rejected',{validPath,path:req.url});socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');socket.destroy();return}
+ const validSignature=verifyStreamSignature(canonical.href,process.env.TWILIO_AUTH_TOKEN,req.headers['x-twilio-signature']);
+ if(!validPath||!validSignature){log('bridge.upgrade_rejected',{validPath,validSignature,path:req.url});socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');socket.destroy();return}
  sockets.handleUpgrade(req,socket,head,ws=>sockets.emit('connection',ws));
 });
 const used=new Map();
