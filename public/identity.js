@@ -12,6 +12,14 @@ export const identityDefaults = {
   reasoningEffort: '', webSearch: false
 };
 export const numberKey = number => '+' + String(number || '').replace(/\D/g, '');
+export function dedupePhoneNumbers(numbers = []) {
+  const unique = new Map();
+  for (const number of numbers) {
+    const key = numberKey(number?.phone_number);
+    if (key !== '+' && !unique.has(key)) unique.set(key, number);
+  }
+  return [...unique.values()];
+}
 export function normalizeIdentity(value = {}) {
   const limits = { label:80,name:40,company:80,language:30,voice:30,role:80,goal:1000,addressMode:20,addressInstructions:500,introduction:600,opening:600,closing:600,instructions:6000,backendModel:50,backendPrompt:6000,reasoningEffort:20 };
   const result = {};

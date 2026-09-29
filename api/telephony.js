@@ -26,6 +26,14 @@ export default async function handler(req,res){
  }
  if(req.method!=='POST')return json(res,405,{error:'Method not allowed.'});
  const body=await readBody(req);
+ if(action==='rename-number'){
+ const sid=String(body.sid||''),friendlyName=String(body.friendlyName||'').trim();
+ if(!/^PN[0-9a-f]{32}$/i.test(sid))return json(res,400,{error:'Select a valid Twilio number.'});
+ if(!friendlyName||friendlyName.length>64)return json(res,400,{error:'Enter a name between 1 and 64 characters.'});
+ const resource=`IncomingPhoneNumbers/${sid}.json`;
+ await twilio(resource);
+ return json(res,200,await twilio(resource,'POST',{FriendlyName:friendlyName}));
+ }
  if(action==='purchase'){
  if(process.env.ENABLE_NUMBER_PURCHASES!=='true')return json(res,403,{error:'Number purchases are disabled for this workspace.'});
  if(body.confirmPurchase!==true||!/^\+[1-9]\d{7,14}$/.test(body.number||''))return json(res,400,{error:'Confirm the purchase and provide a valid number.'});
