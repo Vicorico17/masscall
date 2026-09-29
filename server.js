@@ -15,8 +15,9 @@ const server=http.createServer(async(req,res)=>{
  if(url.pathname==='/api/studio')return studio(req,res);
  if(url.pathname.startsWith('/api/')){res.writeHead(404);return res.end('Not found')}
  if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);return res.end()}
+ if(['/studio','/studio/','/studio.html','/demo.html','/dashboard.html'].includes(url.pathname)){const destination=url.pathname.startsWith('/studio')?'/dashboard':url.pathname==='/dashboard.html'?'/dashboard':'/';res.writeHead(308,{Location:destination});return res.end()}
  let pathname;try{pathname=decodeURIComponent(url.pathname)}catch{res.writeHead(400);return res.end()}
- const file=path.resolve(root,'.'+(pathname==='/'?'/demo.html':pathname==='/dashboard'?'/dashboard.html':pathname==='/studio'?'/studio.html':pathname));
+ const file=path.resolve(root,'.'+(pathname==='/'?'/demo.html':pathname==='/dashboard'?'/dashboard.html':pathname));
  if(!file.startsWith(root+path.sep)){res.writeHead(404);return res.end()}
  fs.readFile(file,(error,data)=>{if(error){res.writeHead(404);return res.end('Not found')};res.writeHead(200,{'Content-Type':({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[path.extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff'});res.end(req.method==='HEAD'?undefined:data)})
 });
