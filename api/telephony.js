@@ -46,7 +46,7 @@ export default async function handler(req,res){
  if(process.env.ENABLE_LIVE_CALLS!=='true')return json(res,403,{error:'Live calls are disabled.'});
  const bridge=String(process.env.VOICE_BRIDGE_URL||'').trim(),bridgeSecret=String(process.env.VOICE_BRIDGE_SECRET||'').trim();
  if(!bridge)return json(res,503,{error:'This Vercel deployment is not receiving VOICE_BRIDGE_URL. Check its Production environment settings, then redeploy.'});
- if(!/^wss:\/\/[^/?#\s]+\/media$/.test(bridge))return json(res,503,{error:'VOICE_BRIDGE_URL is present but invalid. Set it to wss://<bridge-host>/media with no quotes, query, or trailing slash.'});
+ if(!/^wss:\/\/[^/?#\s]+\/media$/.test(bridge))return json(res,503,{error:`VOICE_BRIDGE_URL is present but invalid. The deployed function received ${JSON.stringify(bridge.slice(0,200))}. Set it to wss://<bridge-host>/media with no quotes, query, or trailing slash.`});
  if(!bridgeSecret)return json(res,503,{error:'This Vercel deployment is not receiving VOICE_BRIDGE_SECRET. Check its Production environment settings, then redeploy.'});
  if(!/^\+[1-9]\d{7,14}$/.test(body.to||'')||!/^\+[1-9]\d{7,14}$/.test(body.from||''))return json(res,400,{error:'Use international phone numbers such as +407xxxxxxxx.'});
  if(body.consent!==true||body.recordingConsent!==true)return json(res,400,{error:'Calling permission and recording consent are required.'});
