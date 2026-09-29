@@ -9,10 +9,11 @@ page.on('pageerror', error => errors.push(error.message));
 try {
   await page.goto('http://localhost:3000/');
   await page.locator('#demo-form').waitFor();
-  assert.equal(await page.locator('a.nav-cta').getAttribute('href'), '/dashboard#agent');
+  assert.equal(await page.locator('a.nav-cta').getAttribute('href'), '/dashboard');
 
   await page.goto('http://localhost:3000/dashboard#agent');
   await page.getByLabel('Workspace access token').waitFor();
+  assert.equal(new URL(page.url()).hash, '');
   assert.equal(await page.getByRole('heading', { name: 'Masscall call center' }).count(), 1);
   assert.equal(await page.getByRole('button', { name: 'Close dialog' }).count(), 0);
 
@@ -56,7 +57,7 @@ try {
   await page.locator('#real-from option').filter({ hasText: 'Support line' }).waitFor();
   await page.getByRole('button', { name: 'Edit this number’s agent' }).click();
   await page.getByRole('button', { name: 'Agent', exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to dashboard' }).click();
   assert.equal(await page.locator('.live-workspace-tabs button.active').innerText(), 'Dashboard');
   await page.waitForFunction(() => {
     const rect = document.querySelector('#real-call-card').getBoundingClientRect();
