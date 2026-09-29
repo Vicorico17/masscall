@@ -44,15 +44,17 @@ export default async function handler(req,res){
  }
  if(action==='call'){
  if(process.env.ENABLE_LIVE_CALLS!=='true')return json(res,403,{error:'Live calls are disabled.'});
- const bridge=process.env.VOICE_BRIDGE_URL;
- if(!bridge||!/^wss:\/\/[^?#]+$/.test(bridge)||!process.env.VOICE_BRIDGE_SECRET)return json(res,503,{error:'Configure the secure voice bridge before calling.'});
+ const bridge=String(process.env.VOICE_BRIDGE_URL||'').trim(),bridgeSecret=String(process.env.VOICE_BRIDGE_SECRET||'').trim();
+ if(!bridge)return json(res,503,{error:'This Vercel deployment is not receiving VOICE_BRIDGE_URL. Check its Production environment settings, then redeploy.'});
+ if(!/^wss:\/\/[^/?#\s]+\/media$/.test(bridge))return json(res,503,{error:'VOICE_BRIDGE_URL is present but invalid. Set it to wss://<bridge-host>/media with no quotes, query, or trailing slash.'});
+ if(!bridgeSecret)return json(res,503,{error:'This Vercel deployment is not receiving VOICE_BRIDGE_SECRET. Check its Production environment settings, then redeploy.'});
  if(!/^\+[1-9]\d{7,14}$/.test(body.to||'')||!/^\+[1-9]\d{7,14}$/.test(body.from||''))return json(res,400,{error:'Use international phone numbers such as +407xxxxxxxx.'});
  if(body.consent!==true||body.recordingConsent!==true)return json(res,400,{error:'Calling permission and recording consent are required.'});
  const owned=await twilio('IncomingPhoneNumbers.json?PhoneNumber='+encodeURIComponent(body.from));if(!owned.incoming_phone_numbers?.some(n=>n.phone_number===body.from))return json(res,400,{error:'Caller ID must belong to this workspace.'});
  const objective=String(body.objective||'').trim();if(!objective||objective.length>2000)return json(res,400,{error:'A call objective of up to 2,000 characters is required.'});
  const agent=normalizeIdentity(body.agent);
  const contact=String(body.contact||'').trim().slice(0,80);
- const twiml=buildCallTwiml({bridge,secret:process.env.VOICE_BRIDGE_SECRET,agent,contact,objective,recording:true});
+ const twiml=buildCallTwiml({bridge,secret:bridgeSecret,agent,contact,objective,recording:true});
  const call=await twilio('Calls.json','POST',{To:body.to,From:body.from,Twiml:twiml,Record:'true',RecordingChannels:'dual',RecordingTrack:'both',TimeLimit:'300',Timeout:'25'});
  return json(res,201,call);
  }
