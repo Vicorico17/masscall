@@ -10,7 +10,7 @@
     { "src": "/api/demo", "dest": "/api/demo.js" },
     { "src": "/api/studio", "dest": "/api/studio.js" },
     { "src": "/api/prompts", "dest": "/api/prompts.js" },
-    { "src": "/", "dest": "/public/dashboard.html", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY" } },
+    { "src": "/", "dest": "/public/demo.html", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY" } },
     { "src": "/dashboard", "dest": "/public/dashboard.html", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY" } },
     { "src": "/studio", "dest": "/public/studio.html", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY" } },
     { "src": "/(.*)", "dest": "/public/$1", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY" } }
