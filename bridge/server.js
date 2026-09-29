@@ -54,4 +54,4 @@ sockets.on('connection',phone=>{
  else if(event.event==='stop'){stop();phone.close()}
  }catch{phone.close(1008,'Invalid stream');stop()}});
 });
-server.listen(process.env.BRIDGE_PORT||3001,()=>console.log('Voice bridge is listening'));
+server.listen(Number(process.env.PORT||process.env.BRIDGE_PORT||3001),'0.0.0.0',()=>console.log('Voice bridge is listening'));
