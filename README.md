@@ -35,7 +35,7 @@ The `/dashboard` route opens the **live workspace console** directly. It uses au
 
 Live calls request Twilio dual-channel recording of both tracks. An opening announcement identifies the AI and recording. Recording begins on answer, so the UI requires recording consent before dialing. Recording is stored at Twilio and fetched through the authenticated proxy. No recording is automatically downloaded to the application server's disk. Automatic retention is not implemented; set and enforce a retention period before a customer launch. This version retrieves recording status on demand instead of relying on asynchronous callbacks.
 
-The bridge verifies Twilio upgrade signatures and a short-lived HMAC-signed call context, negotiates raw G.711 μ-law with GPT-Live, paces output in 20 ms frames, and limits provider playback backlog with mark acknowledgments. It uses Responses delegation without business-action tools. It does not yet persist real transcripts or summarize real calls; audio recordings are the durable conversation artifact. Business bookings and CRM writes are not connected.
+The bridge verifies Twilio upgrade signatures and a short-lived HMAC-signed call context, negotiates raw G.711 μ-law with GPT-Live, paces output in 20 ms frames, and limits provider playback backlog with mark acknowledgments. Responses delegation includes a built-in `end_call` control: when the objective is complete or the caller asks to stop, the assistant gives a short goodbye and Masscall ends the Twilio call after its audio finishes. Web search is optional; business bookings and CRM writes are not connected. Real transcripts are not persisted, so audio recordings are the durable conversation artifact.
 
 ## Customer number provisioning
 

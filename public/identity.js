@@ -35,7 +35,7 @@ export function renderPhrase(phrase, identity, contact='', objective='') {
   const values={agent_name:identity.name,company_name:identity.company,first_name:contact.trim().split(/\s+/)[0]||'',full_name:contact.trim(),objective};
   return String(phrase).replace(/\{(agent_name|company_name|first_name|full_name|objective)\}/g,(_,key)=>values[key]);
 }
-export function buildIdentityPrompt(value, contact='', objective='') {
+export function buildIdentityPrompt(value, contact='', objective='', {disclosureAlreadySpoken=false,recordingDisclosed=true}={}) {
   const a=normalizeIdentity(value);
   const addressing={formal:'Use polite formal address (dumneavoastră in Romanian).','first-name':'Address the recipient by their given name, using a friendly tone.','full-name':'Use the provided full name and a professional tone. Do not infer gender or honorifics.',custom:'Follow the custom recipient-address instructions below.'};
   return [
@@ -43,11 +43,13 @@ export function buildIdentityPrompt(value, contact='', objective='') {
     `Recipient: ${contact || 'Name unknown; ask politely rather than inventing a name.'}`,
     `Agent's standing goal: ${a.goal}`,
     `Addressing: ${addressing[a.addressMode]} ${a.addressInstructions}`,
-    `At the start, introduce yourself using: ${renderPhrase(a.introduction,a,contact,objective)}`,
+    disclosureAlreadySpoken
+      ? `The call already began with a clear AI identity disclosure${recordingDisclosed?' and recording disclosure':''}. Do not repeat those disclosures or give another full self-introduction.`
+      : `At the start, introduce yourself using: ${renderPhrase(a.introduction,a,contact,objective)}`,
     `Then open the conversation with: ${renderPhrase(a.opening,a,contact,objective)}`,
     `Call objective: ${objective}`,
     `At a natural end, confirm only verified next steps, then close with: ${renderPhrase(a.closing,a,contact,objective)}`,
     `Additional company guidance: ${a.instructions}`,
-    'The structured identity, introduction, opening, addressing and closing fields take precedence over conflicting identity details in additional company guidance. Always identify yourself as an AI assistant; do not claim to be a human. If an example lacks AI disclosure, add it. Do not speak unresolved template placeholders. Adapt missing-name phrases naturally. If asked to stop, acknowledge politely and stop pursuing the objective. No business-action tools are connected; never invent completed bookings or updates. Closing wording does not itself hang up the telephone connection.'
+    `The structured identity, ${disclosureAlreadySpoken?'opening, addressing and closing':'introduction, opening, addressing and closing'} fields take precedence over conflicting identity details in additional company guidance. ${disclosureAlreadySpoken?'The opening identifies you as an AI assistant; do not claim to be human or repeat that introduction.':'Always identify yourself as an AI assistant; do not claim to be a human, and add an AI disclosure if an example lacks one.'} Do not speak unresolved template placeholders. Adapt missing-name phrases naturally. If asked to stop, acknowledge politely and stop pursuing the objective. No business-action tools are connected; never invent completed bookings or updates.`
   ].join('\n');
 }
