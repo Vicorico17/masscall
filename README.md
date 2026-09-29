@@ -33,7 +33,7 @@ The Settings page contains a **live workspace console**. It uses authenticated s
 2. Buy a voice-capable number through Twilio Console, or enable `ENABLE_NUMBER_PURCHASES=true` to purchase through the live console. Confirm current rental pricing in Twilio first. Countries with regulatory requirements need approved bundles/addresses; the API accepts BundleSid and AddressSid, while the first UI directs those purchases to Twilio Console.
 3. Deploy `bridge/server.js` on a persistent Node host supporting WebSocket upgrades and HTTPS/WSS. Run `npm run bridge`. Ordinary Vercel functions do not host this long-running audio bridge.
 4. Set `VOICE_BRIDGE_URL` to the exact public `wss://.../media` URL and `VOICE_BRIDGE_SECRET` to the same high-entropy secret on both hosts. Set Twilio account SID/auth token and `OPENAI_API_KEY` on the bridge. Optional `OPENAI_BACKEND_MODEL` defaults to `gpt-5.6-luna`. Confirm model availability in the OpenAI project. The Vercel settings indicator can only detect environment configuration; it does not verify provider access.
-5. Add your own mobile to `ALLOWED_TEST_NUMBERS` (comma-separated international numbers) and set `ENABLE_LIVE_CALLS=true`. Calls are capped at five minutes and require an owned caller ID, contact permission, and recording consent.
+5. Set `ENABLE_LIVE_CALLS=true`. The owner console accepts valid international destinations that your Twilio account is permitted to call. Calls are capped at five minutes and require an owned caller ID, contact permission, and recording consent.
 6. Open Settings → live workspace console and enter your owner token. Select your real number and enter the test destination. Agent instructions come from the browser's saved agent configuration.
 7. Place the test call, inspect audio and conversation quality, end it, and refresh the live call list. Open **View recording** once Twilio finishes processing. The player and MP3 download are authenticated; provider credentials are never sent to the browser.
 
@@ -78,7 +78,7 @@ For a real Romanian test, the owner supplies:
 - A funded Twilio account/subaccount: Account SID and Auth Token, stored in the hosting environment.
 - An OpenAI API key with access to GPT-Live-1 and the configured backend model, stored on the voice bridge host.
 - A purchased Romanian voice number. Local business numbers require company registration details, proof of business address within the number's area, and authorized representative documents. Follow Twilio's current requirements and inventory availability.
-- Their own +40 mobile to add to ALLOWED_TEST_NUMBERS, with calling and recording consent.
+- A destination mobile that Twilio is permitted to call, with calling and recording consent.
 - A persistent HTTPS/WSS host for the included bridge. Workspace and bridge secrets are generated during deployment, not purchased from a provider.
 
 The local number rental shown is **USD 3/month**, based on Twilio's Romania price page checked September 11, 2026. It is not a RON conversion or an all-inclusive calling price. Calls, recording, storage, AI usage, taxes, and platform billing are separate.

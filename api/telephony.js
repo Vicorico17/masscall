@@ -40,7 +40,6 @@ export default async function handler(req,res){
  if(!bridge||!/^wss:\/\/[^?#]+$/.test(bridge)||!process.env.VOICE_BRIDGE_SECRET)return json(res,503,{error:'Configure the secure voice bridge before calling.'});
  if(!/^\+[1-9]\d{7,14}$/.test(body.to||'')||!/^\+[1-9]\d{7,14}$/.test(body.from||''))return json(res,400,{error:'Use international phone numbers such as +407xxxxxxxx.'});
  if(body.consent!==true||body.recordingConsent!==true)return json(res,400,{error:'Calling permission and recording consent are required.'});
- const allowed=(process.env.ALLOWED_TEST_NUMBERS||'').split(',').map(v=>v.trim());if(!allowed.includes(body.to))return json(res,403,{error:'This destination is not in the workspace test allowlist.'});
  const owned=await twilio('IncomingPhoneNumbers.json?PhoneNumber='+encodeURIComponent(body.from));if(!owned.incoming_phone_numbers?.some(n=>n.phone_number===body.from))return json(res,400,{error:'Caller ID must belong to this workspace.'});
  const objective=String(body.objective||'').trim();if(!objective||objective.length>2000)return json(res,400,{error:'A call objective of up to 2,000 characters is required.'});
  const agent=normalizeIdentity(body.agent);
