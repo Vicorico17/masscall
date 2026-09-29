@@ -1,4 +1,4 @@
-import { buildIdentityPrompt } from '../public/identity.js';
+import { buildLiveSessionConfig, openingInstructions } from '../lib/live-session.js';
 import http from 'node:http';
 import {createHmac} from 'node:crypto';
 import WebSocket,{WebSocketServer} from 'ws';
@@ -6,7 +6,28 @@ import {equal} from '../lib/telephony.js';
 const required=['OPENAI_API_KEY','VOICE_BRIDGE_SECRET','VOICE_BRIDGE_URL','TWILIO_AUTH_TOKEN','TWILIO_ACCOUNT_SID'];
 const missing=required.filter(key=>!process.env[key]?.trim());
 if(missing.length)throw new Error(`Missing bridge environment variables: ${missing.join(', ')}`);
-const server=http.createServer((req,res)=>{res.writeHead(req.url==='/health'?200:404,{'Content-Type':'application/json'});res.end(JSON.stringify({status:req.url==='/health'?'ok':'not-found'}))});
+const reply=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data))};
+const server=http.createServer(async(req,res)=>{
+ const pathname=new URL(req.url,'http://localhost').pathname;
+ if(req.method==='GET'&&pathname==='/health')return reply(res,200,{status:'ok'});
+ if(req.method!=='POST'||pathname!=='/prompts')return reply(res,404,{error:'Not found.'});
+ if(!equal(req.headers.authorization,`Bearer ${process.env.VOICE_BRIDGE_SECRET}`))return reply(res,401,{error:'Authentication required.'});
+ try{
+  let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>14000)return reply(res,413,{error:'Prompt request is too large.'})}
+  const body=JSON.parse(raw||'{}'),prompt=String(body.prompt||'').trim();
+  if(!prompt||prompt.length>4000)return reply(res,400,{error:'Enter a prompt of up to 4,000 characters.'});
+  const agent=body.agent&&typeof body.agent==='object'?body.agent:{};
+  const input=`Create two compatible prompts for a GPT-Live telephone assistant from the following request. Keep the live voice prompt concise and focused on role, speech style, conversation behavior, and when to delegate. Put task procedures, research guidance, and verification rules in the delegated Responses prompt. Do not invent integrations or claim the assistant can take actions unless explicitly described. Return a JSON object with string properties livePrompt and backendPrompt only.\n\nAgent: ${JSON.stringify({name:agent.name,company:agent.company,language:agent.language,goal:agent.goal})}\n\nUser request:\n${prompt}`;
+  const generated=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:agent.backendModel||process.env.OPENAI_BACKEND_MODEL||'gpt-5.6-luna',instructions:'Generate safe, clear instructions for a phone AI. The voice prompt should fit GPT-Live. The backend prompt is for delegated Responses reasoning and tools. Output valid JSON only.',input,text:{format:{type:'json_object'}},max_output_tokens:1800}),signal:AbortSignal.timeout(55000)});
+  const result=await generated.json().catch(()=>({}));
+  if(!generated.ok)return reply(res,502,{error:result.error?.message||'OpenAI could not generate prompts.'});
+  const text=(result.output||[]).flatMap(item=>item.content||[]).filter(item=>item.type==='output_text').map(item=>item.text||'').join('');
+  const prompts=JSON.parse(text);
+  const livePrompt=String(prompts.livePrompt||'').trim().slice(0,6000),backendPrompt=String(prompts.backendPrompt||'').trim().slice(0,6000);
+  if(!livePrompt||!backendPrompt)return reply(res,502,{error:'OpenAI returned incomplete prompts. Try again.'});
+  return reply(res,200,{livePrompt,backendPrompt});
+ }catch(error){console.error('Prompt generation failed',error.name||'Error');return reply(res,502,{error:'Prompt generation failed. Check OpenAI project access and try again.'})}
+});
 const sockets=new WebSocketServer({noServer:true,maxPayload:65536});
 // Validate the externally visible upgrade URL, not an untrusted Host header.
 server.on('upgrade',(req,socket,head)=>{
@@ -38,9 +59,18 @@ sockets.on('connection',phone=>{
  if(data.expires<Date.now()||used.has(p.signature))throw new Error('Expired or reused call context');used.set(p.signature,data.expires);
  streamSid=event.start.streamSid;clearTimeout(startupTimeout);
  live=new WebSocket('wss://api.openai.com/v1/live/sessions',{headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},handshakeTimeout:10000});
- live.on('open',()=>sendLive({type:'session.start',session:{model:'gpt-live-1',instructions:buildIdentityPrompt(data.agent,data.contact,data.objective),audio:{format:{type:'audio/pcmu',rate:8000},output:{voice:voices.has(data.agent?.voice)?data.agent.voice:'marin'}},delegation:{type:'responses',responses:{model:process.env.OPENAI_BACKEND_MODEL||'gpt-5.6-luna',instructions:'Help the voice assistant with the stated call objective. No company tools are available. Do not invent completed actions.'}}}}));
+ live.on('open',()=>{
+ const session=buildLiveSessionConfig(data.agent,data.contact,data.objective,process.env.OPENAI_BACKEND_MODEL||'gpt-5.6-luna');
+ if(!voices.has(session.audio.output.voice))session.audio.output.voice='marin';
+ sendLive({type:'session.start',session});
+ });
  live.on('message',raw=>{try{const e=JSON.parse(raw.toString());
- if(e.type==='session.started'){started=true;for(const audio of inputQueue)sendLive({type:'session.input_audio.append',audio});inputQueue=[];}
+ if(e.type==='session.started'){
+ started=true;
+ const greeting=openingInstructions(data.agent,data.contact,data.objective);
+ sendLive({type:'session.instructions.append',event_id:'masscall-opening',delegation_id:null,content:greeting});
+ for(const audio of inputQueue)sendLive({type:'session.input_audio.append',audio});inputQueue=[];
+ }
  if(e.type==='session.output_audio.delta'){pendingOutput=Buffer.concat([pendingOutput,Buffer.from(e.delta,'base64')]);if(pendingOutput.length>80000){phone.close(1011,'Audio backlog');stop()}}
  if(e.type==='session.closed'){clearTimeout(closeTimeout);live.close();phone.close();stop();}
  if(e.type==='error'){console.error('Live session error',e.error?.code||'unknown');phone.close(1011,'Voice session error');stop()}

@@ -7,15 +7,20 @@ export const identityDefaults = {
   introduction: 'Sunt {agent_name}, asistentul AI al companiei {company_name}.',
   opening: 'Bună ziua! Vorbesc cu {full_name}? Aveți un moment pentru o scurtă discuție?',
   closing: 'Vă mulțumesc pentru timpul acordat. Vă doresc o zi frumoasă!',
-  instructions: 'Vorbește natural și politicos. Explică scopul apelului și ascultă cu atenție. Confirmă următorul pas. Nu pretinde că ai făcut programări sau modificări fără un instrument conectat.'
+  instructions: 'Vorbește natural și politicos. Explică scopul apelului și ascultă cu atenție. Confirmă următorul pas. Nu pretinde că ai făcut programări sau modificări fără un instrument conectat.',
+  backendModel: 'gpt-5.6-luna', backendPrompt: 'Help the voice assistant with the stated call objective. Use web search only when enabled. No company functions are connected; do not claim that you completed external actions.',
+  reasoningEffort: '', webSearch: false
 };
 export const numberKey = number => '+' + String(number || '').replace(/\D/g, '');
 export function normalizeIdentity(value = {}) {
-  const limits = { label:80,name:40,company:80,language:30,voice:30,role:80,goal:1000,addressMode:20,addressInstructions:500,introduction:600,opening:600,closing:600,instructions:5000 };
+  const limits = { label:80,name:40,company:80,language:30,voice:30,role:80,goal:1000,addressMode:20,addressInstructions:500,introduction:600,opening:600,closing:600,instructions:6000,backendModel:50,backendPrompt:6000,reasoningEffort:20 };
   const result = {};
   for (const [key,max] of Object.entries(limits)) result[key] = String(value[key] ?? identityDefaults[key]).trim().slice(0,max);
   if (!['formal','first-name','full-name','custom'].includes(result.addressMode)) result.addressMode='formal';
   if (!['marin','cedar','quartz','ripple','vesper','willow','stone','gleam'].includes(result.voice)) result.voice='marin';
+  if (!['gpt-5.6-luna','gpt-5.6-sol','gpt-6-luna','gpt-6-sol'].includes(result.backendModel)) result.backendModel='gpt-5.6-luna';
+  if (!['','low','medium','high'].includes(result.reasoningEffort)) result.reasoningEffort='';
+  result.webSearch=value.webSearch===true||value.webSearch==='true';
   return result;
 }
 export function renderPhrase(phrase, identity, contact='', objective='') {
