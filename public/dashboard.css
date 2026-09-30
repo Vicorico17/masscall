@@ -42,3 +42,4 @@ body.call-center .sidebar>:not(.brand){display:none}.number-label-editor{padding
 .call-plan-settings .field:last-child{margin-bottom:0}
 #real-call-card,#people-management,#template-management,#call-logs,#live-studio-slot{scroll-margin-top:80px}
 @media(max-width:740px){.directory-row{grid-template-columns:minmax(0,1fr) auto}.directory-row>.tag{grid-column:1}.directory-row>.actions{grid-column:1/-1;justify-content:flex-end}.directory-form{padding:13px}.live-workspace-tabs{overflow-x:auto;justify-content:flex-start}.live-workspace-tabs button{flex:0 0 auto}}
+.call-starter-picker .inline-form select{flex:1;min-width:0}.call-starter-picker .inline-form .btn{flex-shrink:0}

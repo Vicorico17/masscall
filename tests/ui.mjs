@@ -63,12 +63,18 @@ try {
     const rect = document.querySelector('#real-call-card').getBoundingClientRect();
     return rect.top < innerHeight && rect.bottom > 0;
   });
+  await page.locator('#real-starter').selectOption('new-prospect');
+  assert.match(await page.locator('#real-objective').inputValue(), /understand whether the person has a relevant need/);
+  assert.match(await page.locator('#real-completion-trigger').inputValue(), /agrees to a next step/);
+  await page.getByRole('button', { name: 'Save this plan' }).click();
+  assert.equal(await page.locator('#template-name').inputValue(), 'Introduce your business to a prospect');
+  assert.match(await page.locator('#template-objective').inputValue(), /understand whether the person has a relevant need/);
 
   await page.goto('http://localhost:3000/demo.html');
   assert.equal(new URL(page.url()).pathname, '/');
   await page.locator('#demo-form').waitFor();
   assert.deepEqual(errors, []);
-  console.log('PASS: landing, authenticated dashboard navigation, unique Twilio numbers, and legacy URL redirects');
+  console.log('PASS: landing, authenticated dashboard navigation, unique Twilio numbers, call starters, and legacy URL redirects');
 } finally {
   await browser.close();
 }
