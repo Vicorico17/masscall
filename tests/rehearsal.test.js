@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {normalizeRehearsalRequest,rehearsalInstructions,rehearsalInput} from '../lib/rehearsal.js';
 import handler from '../api/rehearsal.js';
 
-const base={agent:{name:'Andreea',company:'Masscall',language:'Italian',voice:'marin'},contact:'Ana Popescu',objective:'Qualify a new prospect',callPlan:{category:'Prospects',company:'Atelier',personNotes:'Asked for a call this week.',opening:'Ask if now is a good time.',talkingPoints:'Ask about their needs.',closing:'Thank them and confirm next steps.',completionTrigger:'They agree to a follow-up or decline.'}};
+const base={agent:{name:'Andreea',company:'Masscall',language:'Italian',voice:'marin'},contact:'Ana Popescu',objective:'Qualify a new prospect',callPlan:{category:'Prospects',company:'Atelier',personNotes:'Asked for a call this week.',opening:'Ask if now is a good time.',talkingPoints:'Ask about their needs.',closing:'Thank them and confirm next steps.',completionTrigger:'They agree to a follow-up or decline.',branches:[{when:'They ask about pricing.',then:'Explain the approved price and ask what they need.'}]}};
 
 test('rehearsal uses the selected identity, person, plan, language and end condition',()=>{
  const request=normalizeRehearsalRequest({...base,start:true,messages:[]}),prompt=rehearsalInstructions(request);
- for(const phrase of ['Andreea','Ana Popescu','Qualify a new prospect','Italian','Asked for a call this week.','They agree to a follow-up or decline.','masscall.vercel.app','JSON'])assert.ok(prompt.includes(phrase),phrase);
+ for(const phrase of ['Andreea','Ana Popescu','Qualify a new prospect','Italian','Asked for a call this week.','They agree to a follow-up or decline.','If They ask about pricing.: Explain the approved price','masscall.vercel.app','JSON'])assert.ok(prompt.includes(phrase),phrase);
  assert.deepEqual(rehearsalInput(request),[{role:'user',content:'The outbound call has connected. Give the agent’s first spoken response now.'}]);
 });
 

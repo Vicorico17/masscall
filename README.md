@@ -39,6 +39,8 @@ The bridge verifies Twilio upgrade signatures and a short-lived HMAC-signed call
 
 The live call center includes **People** and **Call templates**. Save a person with a target group, company, role, and background; choose them before dialing to populate the contact details. Four ready-made call plans cover prospect introductions, appointment confirmations, customer follow-ups, and service feedback. Choose one to prefill the call, edit it, and save it as a reusable template. Saved templates can be associated with a target group, and selecting a matching person can load that group's template. The completion condition is passed into the live agent instructions and governs when it calls `end_call`; callers can still ask to stop at any time. People, groups, and templates are stored in this browser's local storage, so they are not shared across browsers or devices.
 
+Templates also support up to six optional **conversation branches**. Add a condition such as “They ask about price” and the response/action the agent should take. Branch instructions go into rehearsals, individual live calls, and scheduled campaigns using that template. These are natural-language instructions for the live model; they do not execute bookings, CRM changes, or other external actions.
+
 Before a real call, choose **Rehearse this setup** to role-play a text conversation using the selected agent identity, person context, language, and call plan. The rehearsal does not dial or record a phone call, but sends the selected context and transcript to the configured OpenAI project, where model usage is billed. Rehearsal history is sent with each turn and not persisted by the app or OpenAI Responses request.
 
 After a real call ends, use **Review outcome** in the call log to record the result, agreed next step, optional follow-up date, and notes. Call context and reviews are stored in browser local storage only. The log links to the Twilio recording but does not transcribe or automatically analyze it.
@@ -53,6 +55,7 @@ Scheduling needs the existing `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKE
 - `QSTASH_CURRENT_SIGNING_KEY`
 - `QSTASH_NEXT_SIGNING_KEY`
 - `MASSCALL_PUBLIC_URL` set to `https://masscall.vercel.app`
+- `QSTASH_URL` only if the QStash dashboard gives you a region-specific API URL; otherwise the app uses `https://qstash.upstash.io`.
 
 Create an Upstash QStash account, open its dashboard, and copy the token and both signing keys from the QStash page into Vercel. Use the exact app origin for `MASSCALL_PUBLIC_URL`, with no path. Redeploy Vercel after saving variables. QStash sends authenticated callbacks to `/api/campaigns?action=run`; the app validates the signature against the configured current and next signing keys. It uses QStash delayed messages for individual campaign steps rather than a periodic cron job. See [QStash message publishing](https://upstash.com/docs/qstash/api-reference/messages/publish-a-message) and [signature verification](https://upstash.com/docs/qstash/howto/signature).
 

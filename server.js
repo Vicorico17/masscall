@@ -7,6 +7,7 @@ import telephony from './api/telephony.js';
 import demo from './api/demo.js';
 import studio from './api/studio.js';
 import rehearsal from './api/rehearsal.js';
+import campaigns from './api/campaigns.js';
 const root=path.join(path.dirname(fileURLToPath(import.meta.url)),'public');
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');
@@ -15,6 +16,7 @@ const server=http.createServer(async(req,res)=>{
  if(url.pathname==='/api/demo')return demo(req,res);
  if(url.pathname==='/api/studio')return studio(req,res);
  if(url.pathname==='/api/rehearsal')return rehearsal(req,res);
+ if(url.pathname==='/api/campaigns')return campaigns(req,res);
  if(url.pathname.startsWith('/api/')){res.writeHead(404);return res.end('Not found')}
  if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);return res.end()}
  if(['/studio','/studio/','/studio.html','/demo.html','/dashboard.html'].includes(url.pathname)){const destination=url.pathname.startsWith('/studio')?'/dashboard':url.pathname==='/dashboard.html'?'/dashboard':'/';res.writeHead(308,{Location:destination});return res.end()}
