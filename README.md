@@ -41,6 +41,8 @@ The live call center includes **People** and **Call templates**. Save a person w
 
 Before a real call, choose **Rehearse this setup** to role-play a text conversation using the selected agent identity, person context, language, and call plan. The rehearsal does not dial or record a phone call, but sends the selected context and transcript to the configured OpenAI project, where model usage is billed. Rehearsal history is sent with each turn and not persisted by the app or OpenAI Responses request.
 
+After a real call ends, use **Review outcome** in the call log to record the result, agreed next step, optional follow-up date, and notes. Call context and reviews are stored in browser local storage only. The log links to the Twilio recording but does not transcribe or automatically analyze it.
+
 ## Customer number provisioning
 
 Twilio subaccounts can separate each customer's numbers and usage under a parent account. Studio currently uses one Twilio account with operator-assigned numbers and a basic Stripe subscription gate. Per-customer Twilio subaccounts, metered usage billing, automated number provisioning, number-price quotes, operational dashboards, and recording retention policies still need work before reselling at scale. The app does not imply blanket permission to resell numbers in every country.

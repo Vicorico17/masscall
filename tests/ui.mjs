@@ -29,6 +29,7 @@ try {
     { phone_number: '+14155550104', friendly_name: 'Main line' },
     { phone_number: '+1 (415) 555-0104', friendly_name: 'Duplicate main line' }
   ];
+  const calls=[];
   await page.route('**/api/telephony?action=numbers', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -37,8 +38,13 @@ try {
   await page.route('**/api/telephony?action=calls', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ calls: [] })
+    body: JSON.stringify({ calls })
   }));
+  await page.route('**/api/telephony?action=call', async route => {
+    const body=route.request().postDataJSON();
+    calls.unshift({sid:`CA${'c'.repeat(32)}`,to:body.to,from:body.from,status:'completed',duration:31});
+    await route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({sid:calls[0].sid,status:'queued'})});
+  });
   const rehearsals=[];
   await page.route('**/api/rehearsal', async route => {
     const body=route.request().postDataJSON();rehearsals.push(body);
@@ -84,12 +90,23 @@ try {
   assert.equal(rehearsals[0].callPlan.category,'Prospects');
   assert.equal(rehearsals[0].callPlan.completionTrigger,'They agree to a next step, clearly decline, or ask to end the call.');
   assert.equal(await page.getByText('The agent reached the configured end condition. No phone call was placed.').count(),1);
+  await page.getByLabel('Contact name').fill('Ana Popescu');
+  await page.getByLabel('Destination phone').fill('+40735577052');
+  await page.getByLabel('I have permission to call this person.').check();
+  await page.getByLabel(/required consent to record/).check();
+  await page.getByRole('button', {name:'Call & record conversation'}).click();
+  await page.getByRole('button', {name:'Review outcome'}).waitFor();
+  await page.getByRole('button', {name:'Review outcome'}).click();
+  await page.getByLabel('Call result').selectOption('follow_up');
+  await page.getByLabel('Agreed next step').fill('Send service details');
+  await page.getByRole('button', {name:'Save review'}).click();
+  await page.getByText('Follow-up agreed').waitFor();
 
   await page.goto('http://localhost:3000/demo.html');
   assert.equal(new URL(page.url()).pathname, '/');
   await page.locator('#demo-form').waitFor();
   assert.deepEqual(errors, []);
-  console.log('PASS: landing, authenticated dashboard navigation, unique Twilio numbers, call starters, rehearsal, and legacy URL redirects');
+  console.log('PASS: landing, authenticated dashboard navigation, unique numbers, templates, rehearsal, call review, and redirects');
 } finally {
   await browser.close();
 }
