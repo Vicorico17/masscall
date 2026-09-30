@@ -14,3 +14,31 @@ body.call-center .sidebar>:not(.brand){display:none}.number-label-editor{padding
 .language-field .language-select:focus{border-color:#9279d3;box-shadow:0 0 0 3px #7355da18}
 .language-field .language-promise{display:block;margin-top:8px;color:#7355a6;font-size:10px;line-height:1.55;font-weight:600}
 .language-field .hint{display:block;margin-top:5px;font-size:9px}
+
+/* People and call plans */
+.directory-card{margin-top:22px;scroll-margin-top:76px}
+.directory-card .card-head{align-items:flex-start;margin-bottom:16px}
+.directory-card .card-head p{margin:6px 0 0;color:#8b93a1;font-size:10px;line-height:1.6}
+.directory-card .eyebrow{margin-bottom:7px}
+.directory-form{padding:17px;background:linear-gradient(135deg,#fcfbff,#f8f7fb);border:1px solid #ebe7f3;border-radius:9px}
+.directory-form .field{margin-bottom:12px}
+.directory-form .field label,.category-create>label{display:block;margin-bottom:6px;color:#626a79;font-size:10px;font-weight:600}
+.directory-form input,.directory-form textarea,.directory-form select,.inline-form input{font-size:11px}
+.directory-form .actions{margin-top:5px}
+.category-create{margin-top:17px;max-width:460px}
+.inline-form{display:flex;gap:8px}
+.inline-form input{min-width:0;flex:1;border:1px solid #e2e5ec;border-radius:6px;padding:10px 12px;background:#fff}
+.directory-list{display:grid;gap:8px;margin-top:17px}
+.directory-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:13px;padding:12px 13px;border:1px solid #eceef2;border-radius:8px;background:#fff}
+.directory-person{min-width:0}
+.directory-person strong{display:block;font-size:11px}
+.directory-person small{display:-webkit-box;overflow:hidden;color:#8c94a1;font-size:9px;line-height:1.5;margin-top:4px;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.directory-row .actions{gap:12px}
+.compact-empty{padding:20px 12px}
+.compact-empty h3{font-size:12px}
+.compact-empty p{font-size:10px}
+.call-plan-settings{margin:6px 0 18px;padding:14px;background:#faf9fc;border:1px solid #e9e5f2;border-radius:8px}
+.call-plan-settings>summary{margin:-2px 0 14px;color:#4f4567;font-weight:700;font-size:11px;cursor:pointer}
+.call-plan-settings .field:last-child{margin-bottom:0}
+#real-call-card,#people-management,#template-management,#call-logs,#live-studio-slot{scroll-margin-top:80px}
+@media(max-width:740px){.directory-row{grid-template-columns:minmax(0,1fr) auto}.directory-row>.tag{grid-column:1}.directory-row>.actions{grid-column:1/-1;justify-content:flex-end}.directory-form{padding:13px}.live-workspace-tabs{overflow-x:auto;justify-content:flex-start}.live-workspace-tabs button{flex:0 0 auto}}

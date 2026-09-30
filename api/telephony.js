@@ -1,6 +1,7 @@
 import { normalizeIdentity } from '../public/identity.js';
 import {authorize,twilio,readBody,json} from '../lib/telephony.js';
 import {buildCallTwiml} from '../lib/call-context.js';
+import {normalizeCallPlan} from '../lib/call-plan.js';
 export default async function handler(req,res){
  if(!authorize(req))return json(res,401,{error:'Workspace authentication required.'});
  try{
@@ -54,7 +55,8 @@ export default async function handler(req,res){
  const objective=String(body.objective||'').trim();if(!objective||objective.length>2000)return json(res,400,{error:'A call objective of up to 2,000 characters is required.'});
  const agent=normalizeIdentity(body.agent);
  const contact=String(body.contact||'').trim().slice(0,80);
- const twiml=buildCallTwiml({bridge,secret:bridgeSecret,agent,contact,objective,recording:true});
+ const callPlan=normalizeCallPlan(body.callPlan);
+ const twiml=buildCallTwiml({bridge,secret:bridgeSecret,agent,contact,objective,callPlan,recording:true});
  const call=await twilio('Calls.json','POST',{To:body.to,From:body.from,Twiml:twiml,Record:'true',RecordingChannels:'dual',RecordingTrack:'both',TimeLimit:'300',Timeout:'25'});
  return json(res,201,call);
  }

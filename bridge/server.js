@@ -65,7 +65,7 @@ sockets.on('connection',phone=>{
  streamSid=event.start.streamSid;callSid=event.start.callSid;clearTimeout(startupTimeout);log('bridge.twilio_stream_started',{callSid});
  live=new WebSocket('wss://api.openai.com/v1/live/sessions',{headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},handshakeTimeout:10000});
  live.on('open',()=>{
- const session=buildLiveSessionConfig(data.agent,data.contact,data.objective,process.env.OPENAI_BACKEND_MODEL||'gpt-5.6-luna',data.recording!==false);
+ const session=buildLiveSessionConfig(data.agent,data.contact,data.objective,process.env.OPENAI_BACKEND_MODEL||'gpt-5.6-luna',data.recording!==false,data.callPlan);
  if(!voices.has(session.audio.output.voice))session.audio.output.voice='marin';
  log('bridge.openai_connected',{model:session.model,voice:session.audio.output.voice});
  sendLive({type:'session.start',session});
@@ -74,7 +74,7 @@ sockets.on('connection',phone=>{
  if(e.type==='session.started'){
  started=true;
  log('bridge.live_session_started',{sessionId:e.session?.id});
- const greeting=openingInstructions(data.agent,data.contact,data.objective,data.recording!==false);
+ const greeting=openingInstructions(data.agent,data.contact,data.objective,data.recording!==false,data.callPlan);
  sendLive({type:'session.instructions.append',event_id:'masscall-opening',delegation_id:null,content:greeting});
  for(const audio of inputQueue){sendLive({type:'session.input_audio.append',audio});if(!sentInput){sentInput=true;log('bridge.first_input_audio_sent',{queued:true})}}inputQueue=[];
  }

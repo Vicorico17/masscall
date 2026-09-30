@@ -11,8 +11,8 @@ test('GPT-Live session applies the selected voice, Responses model, reasoning an
  assert.deepEqual(session.delegation.responses.reasoning,{effort:'medium'});
  assert.deepEqual(session.delegation.responses.tools,[{type:'function',name:'end_call',description:'End this phone call after the objective has been completed or the caller clearly asks to stop.',parameters:{type:'object',properties:{reason:{type:'string',enum:['goal_complete','caller_requested_end']}},required:['reason'],additionalProperties:false},strict:true},{type:'web_search'}]);
  assert.match(session.delegation.responses.instructions,/Research current opening hours\./);
- assert.match(session.delegation.responses.instructions,/use the end_call function only when the stated objective is complete/);
- assert.match(session.instructions,/delegate immediately to the backend to call end_call/);
+ assert.match(session.delegation.responses.instructions,/use the end_call function only when the caller clearly asks to stop or the call completion condition is met/);
+ assert.match(session.instructions,/invoke end_call promptly/);
 });
 
 test('GPT-Live omits optional reasoning and web search unless selected but always provides call control',()=>{
@@ -36,6 +36,16 @@ test('live call language instruction covers the configured goodbye too',()=>{
  assert.match(session.instructions,/Speak only in Italian throughout the call/);
  assert.match(session.instructions,/goodbye in Italian, adapting the configured closing if needed/);
  assert.match(openingInstructions({language:'Italian',opening:'Bună ziua!'}),/meaning of this configured opening naturally in Italian/);
+});
+
+test('per-call plan controls the opening, discussion points, closing and hangup condition',()=>{
+ const session=buildLiveSessionConfig({language:'Italian',opening:'Ciao!',closing:'Arrivederci!'},'Ana','Qualify a lead','gpt-5.6-luna',true,{category:'Prospects',company:'Example SRL',opening:'Ask if now is a good time.',talkingPoints:'Understand their current needs.',closing:'Thank them and agree on a next step.',completionTrigger:'They agree on a next step or clearly decline.'});
+ assert.match(session.instructions,/Ask if now is a good time/);
+ assert.match(session.instructions,/Understand their current needs/);
+ assert.match(session.instructions,/They agree on a next step or clearly decline/);
+ assert.match(session.instructions,/give a friendly, brief goodbye in Italian/);
+ assert.match(session.delegation.responses.instructions,/Completion condition: They agree on a next step/);
+ assert.match(openingInstructions({language:'Italian'},'Ana','Qualify a lead',true,{opening:'Ask if now is a good time.'}),/Ask if now is a good time/);
 });
 
 test('demo calls do not tell the assistant that recording was disclosed',()=>{
