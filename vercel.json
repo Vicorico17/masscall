@@ -10,6 +10,7 @@
     { "src": "/api/demo", "dest": "/api/demo.js" },
     { "src": "/api/studio", "dest": "/api/studio.js" },
     { "src": "/api/prompts", "dest": "/api/prompts.js" },
+    { "src": "/api/rehearsal", "dest": "/api/rehearsal.js" },
     { "src": "/studio", "status": 308, "headers": { "Location": "/dashboard" } },
     { "src": "/studio/", "status": 308, "headers": { "Location": "/dashboard" } },
     { "src": "/studio\\.html", "status": 308, "headers": { "Location": "/dashboard" } },

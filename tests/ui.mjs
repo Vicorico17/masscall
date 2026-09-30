@@ -39,6 +39,12 @@ try {
     contentType: 'application/json',
     body: JSON.stringify({ calls: [] })
   }));
+  const rehearsals=[];
+  await page.route('**/api/rehearsal', async route => {
+    const body=route.request().postDataJSON();rehearsals.push(body);
+    const result=body.start?{reply:'Bună ziua, Ana! Aveți un moment?',callComplete:false}:{reply:'Mulțumesc pentru timpul acordat. O zi frumoasă!',callComplete:true};
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+  });
   await page.route('**/api/telephony?action=rename-number', async route => {
     const body = route.request().postDataJSON();
     assert.equal(body.friendlyName, 'Support line');
@@ -69,12 +75,21 @@ try {
   await page.getByRole('button', { name: 'Save this plan' }).click();
   assert.equal(await page.locator('#template-name').inputValue(), 'Introduce your business to a prospect');
   assert.match(await page.locator('#template-objective').inputValue(), /understand whether the person has a relevant need/);
+  await page.getByRole('button', { name: 'Rehearse this setup' }).click();
+  await page.getByText('Bună ziua, Ana! Aveți un moment?').waitFor();
+  await page.getByLabel('Your reply as the caller').fill('Yes, please tell me about your service.');
+  await page.getByRole('button', { name: 'Reply' }).click();
+  await page.getByText('Mulțumesc pentru timpul acordat. O zi frumoasă!').waitFor();
+  assert.equal(rehearsals.length,2);
+  assert.equal(rehearsals[0].callPlan.category,'Prospects');
+  assert.equal(rehearsals[0].callPlan.completionTrigger,'They agree to a next step, clearly decline, or ask to end the call.');
+  assert.equal(await page.getByText('The agent reached the configured end condition. No phone call was placed.').count(),1);
 
   await page.goto('http://localhost:3000/demo.html');
   assert.equal(new URL(page.url()).pathname, '/');
   await page.locator('#demo-form').waitFor();
   assert.deepEqual(errors, []);
-  console.log('PASS: landing, authenticated dashboard navigation, unique Twilio numbers, call starters, and legacy URL redirects');
+  console.log('PASS: landing, authenticated dashboard navigation, unique Twilio numbers, call starters, rehearsal, and legacy URL redirects');
 } finally {
   await browser.close();
 }
