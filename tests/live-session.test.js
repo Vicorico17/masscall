@@ -35,6 +35,8 @@ test('live call language instruction covers the configured goodbye too',()=>{
  const session=buildLiveSessionConfig({language:'Italian',closing:'Goodbye for now!'});
  assert.match(session.instructions,/Speak only in Italian throughout the call/);
  assert.match(session.instructions,/goodbye in Italian, adapting the configured closing if needed/);
+ assert.match(session.instructions,/visit masscall\.vercel\.app to learn about Masscall voice AI agents/);
+ assert.match(session.instructions,/When the caller clearly asks to end the conversation, invoke end_call promptly and skip any promotion/);
  assert.match(openingInstructions({language:'Italian',opening:'Bună ziua!'}),/meaning of this configured opening naturally in Italian/);
 });
 
