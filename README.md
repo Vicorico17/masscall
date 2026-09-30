@@ -43,6 +43,21 @@ Before a real call, choose **Rehearse this setup** to role-play a text conversat
 
 After a real call ends, use **Review outcome** in the call log to record the result, agreed next step, optional follow-up date, and notes. Call context and reviews are stored in browser local storage only. The log links to the Twilio recording but does not transcribe or automatically analyze it.
 
+## Scheduled campaigns
+
+The live call center can schedule a one-time campaign for a saved target group. Choose a caller ID and saved call template, select up to 20 eligible contacts, and choose a start time within seven days. Each selected person must have **calling consent** and **recording consent** checked on their People record, and the campaign form asks the operator to reconfirm permission before scheduling. Campaigns snapshot the selected people and call plan in Redis so later browser edits do not change a queued run. Contacts are dialed one at a time; the next call waits for the previous Twilio call to finish. The worker pauses outside Monday–Friday, 09:00–18:00 Europe/Bucharest and starts no new call after 17:55 to leave room for its five-minute call limit. It stops at a 20 campaign calls per day limit. If Twilio returns an ambiguous error after a dial request, the campaign moves to **needs review** instead of retrying a possible duplicate call.
+
+Scheduling needs the existing `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `DEMO_HASH_SECRET`, plus these private Vercel environment variables in Production (and Preview if testing preview deployments):
+
+- `QSTASH_TOKEN`
+- `QSTASH_CURRENT_SIGNING_KEY`
+- `QSTASH_NEXT_SIGNING_KEY`
+- `MASSCALL_PUBLIC_URL` set to `https://masscall.vercel.app`
+
+Create an Upstash QStash account, open its dashboard, and copy the token and both signing keys from the QStash page into Vercel. Use the exact app origin for `MASSCALL_PUBLIC_URL`, with no path. Redeploy Vercel after saving variables. QStash sends authenticated callbacks to `/api/campaigns?action=run`; the app validates the signature against the configured current and next signing keys. It uses QStash delayed messages for individual campaign steps rather than a periodic cron job. See [QStash message publishing](https://upstash.com/docs/qstash/api-reference/messages/publish-a-message) and [signature verification](https://upstash.com/docs/qstash/howto/signature).
+
+People, groups, and templates are still stored in browser local storage. Scheduling uploads only the selected contact and call-plan snapshot to Redis. The campaign queue is workspace-wide, matching the current single-owner call center.
+
 ## Customer number provisioning
 
 Twilio subaccounts can separate each customer's numbers and usage under a parent account. Studio currently uses one Twilio account with operator-assigned numbers and a basic Stripe subscription gate. Per-customer Twilio subaccounts, metered usage billing, automated number provisioning, number-price quotes, operational dashboards, and recording retention policies still need work before reselling at scale. The app does not imply blanket permission to resell numbers in every country.
@@ -55,7 +70,7 @@ npm test
 node tests/ui.mjs
 ```
 
-Backend tests mock provider calls and verify authentication, purchase gating, destination restrictions, recording consent, dual-channel recording, signed context, and provider error handling. The UI smoke test confirms the landing page, consistent dashboard token prompt, invalid-token rejection, and redirects from legacy URLs. Real phone calls and provider interoperability need funded credentials and a deployed bridge.
+Backend tests mock provider calls and verify authentication, purchase gating, destination restrictions, recording consent, dual-channel recording, signed context, campaign scheduling, signed QStash callbacks, and provider error handling. The UI smoke test confirms the landing page, consistent dashboard token prompt, invalid-token rejection, and redirects from legacy URLs. Real phone calls and provider interoperability need funded credentials and a deployed bridge.
 
 ## Deployment
 
