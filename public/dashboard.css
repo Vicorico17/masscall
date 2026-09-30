@@ -8,3 +8,9 @@
 .studio-tabs{display:flex;gap:7px;margin:0 0 18px;border-bottom:1px solid var(--line);padding-bottom:10px}.studio-tabs span,.studio-tabs button{border:0;background:transparent;padding:9px 14px;border-radius:7px;color:var(--muted);font-size:12px}.studio-tabs .active{background:var(--pale);color:var(--purple);font-weight:700}.model-chip{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-weight:700}.tool-toggle .check-label{display:flex;align-items:center;gap:8px;margin:5px 0}.function-status{border:1px dashed #ddd6e8;background:#faf9fc;border-radius:8px;padding:12px}.function-status p{font-size:11px;line-height:1.6;color:var(--muted);margin:0}.prompt-starter{background:#faf9fc;border:1px solid var(--line);border-radius:9px;padding:16px}.prompt-starter .btn{margin-top:10px}.prompt-starter small{display:block;margin-top:9px}
 
 body.call-center .sidebar>:not(.brand){display:none}.number-label-editor{padding:13px 14px;background:#faf9fc;border:1px solid var(--line);border-radius:8px;margin:0 0 13px}.number-label-editor .field{margin:0 0 10px}.number-label-editor .inline-note{margin:7px 0 0}.live-workspace-tabs{position:sticky;top:0;z-index:5;background:var(--bg);padding-top:8px}
+
+/* Language choice is a call-wide behavior and should read clearly in Studio. */
+.language-field .language-select{min-height:45px;padding:12px 14px;border-color:#dcd5ed;background:linear-gradient(135deg,#fbfaff,#f5f2fc);color:#433563;font-size:13px;font-weight:600;box-shadow:0 2px 8px #6042c508}
+.language-field .language-select:focus{border-color:#9279d3;box-shadow:0 0 0 3px #7355da18}
+.language-field .language-promise{display:block;margin-top:8px;color:#7355a6;font-size:10px;line-height:1.55;font-weight:600}
+.language-field .hint{display:block;margin-top:5px;font-size:9px}

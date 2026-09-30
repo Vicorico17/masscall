@@ -11,6 +11,21 @@ export const identityDefaults = {
   backendModel: 'gpt-5.6-luna', backendPrompt: 'Help the voice assistant with the stated call objective. Use web search only when enabled. No company functions are connected; do not claim that you completed external actions.',
   reasoningEffort: '', webSearch: false
 };
+export const supportedLanguages = [
+  {name:'English',native:'English',region:'United States',flag:'🇺🇸',locale:'en-US',voice:'Polly.Joanna',recorded:'I’m one of Vico’s AI assistants, and this call is being recorded.',unrecorded:'I’m one of Vico’s AI assistants.'},
+  {name:'Romanian',native:'Română',region:'Romania',flag:'🇷🇴',locale:'ro-RO',voice:'Polly.Carmen',recorded:'Sunt unul dintre asistenții AI ai lui Vico, iar acest apel este înregistrat.',unrecorded:'Sunt unul dintre asistenții AI ai lui Vico.'},
+  {name:'Italian',native:'Italiano',region:'Italy',flag:'🇮🇹',locale:'it-IT',voice:'Polly.Bianca',recorded:'Sono uno degli assistenti AI di Vico e questa chiamata viene registrata.',unrecorded:'Sono uno degli assistenti AI di Vico.'},
+  {name:'Spanish',native:'Español',region:'Spain',flag:'🇪🇸',locale:'es-ES',voice:'Polly.Conchita',recorded:'Soy uno de los asistentes de IA de Vico y esta llamada está siendo grabada.',unrecorded:'Soy uno de los asistentes de IA de Vico.'},
+  {name:'French',native:'Français',region:'France',flag:'🇫🇷',locale:'fr-FR',voice:'Polly.Celine',recorded:'Je suis l’un des assistants IA de Vico et cet appel est enregistré.',unrecorded:'Je suis l’un des assistants IA de Vico.'},
+  {name:'German',native:'Deutsch',region:'Germany',flag:'🇩🇪',locale:'de-DE',voice:'Polly.Vicki',recorded:'Ich bin einer der KI-Assistenten von Vico und dieses Gespräch wird aufgezeichnet.',unrecorded:'Ich bin einer der KI-Assistenten von Vico.'},
+  {name:'Portuguese',native:'Português',region:'Portugal',flag:'🇵🇹',locale:'pt-PT',voice:'Polly.Ines',recorded:'Sou um dos assistentes de IA da Vico e esta chamada está a ser gravada.',unrecorded:'Sou um dos assistentes de IA da Vico.'},
+  {name:'Dutch',native:'Nederlands',region:'Netherlands',flag:'🇳🇱',locale:'nl-NL',voice:'Polly.Lotte',recorded:'Ik ben een van Vico’s AI-assistenten en dit gesprek wordt opgenomen.',unrecorded:'Ik ben een van Vico’s AI-assistenten.'},
+  {name:'Polish',native:'Polski',region:'Poland',flag:'🇵🇱',locale:'pl-PL',voice:'Polly.Ewa',recorded:'Jestem jednym z asystentów AI Vico, a ta rozmowa jest nagrywana.',unrecorded:'Jestem jednym z asystentów AI Vico.'},
+  {name:'Turkish',native:'Türkçe',region:'Turkey',flag:'🇹🇷',locale:'tr-TR',voice:'Polly.Filiz',recorded:'Vico’nun yapay zekâ asistanlarından biriyim ve bu görüşme kaydediliyor.',unrecorded:'Vico’nun yapay zekâ asistanlarından biriyim.'}
+];
+export function languageDetails(value='Romanian') { return supportedLanguages.find(language=>language.name.toLowerCase()===String(value).trim().toLowerCase())||supportedLanguages[1]; }
+export function languagePolicy(value='Romanian') { const language=languageDetails(value);return `Speak only in ${language.name} throughout the call. Keep every greeting, response, and closing in ${language.name}. If saved examples or instructions use another language, convey their meaning in ${language.name} instead of repeating their original wording. Do not switch languages, even if the caller does.`; }
+export function languageOptions(value='Romanian',id='language') { const language=languageDetails(value);return `<select id="${id}" name="language" class="language-select">${supportedLanguages.map(option=>`<option value="${option.name}" ${option.name===language.name?'selected':''}>${option.flag} ${option.native} · ${option.region}</option>`).join('')}</select><small class="language-promise" id="${id}-policy" aria-live="polite">${language.flag} Call prompt: Speak only in ${language.name} throughout the call.</small>`; }
 export const numberKey = number => '+' + String(number || '').replace(/\D/g, '');
 export function dedupePhoneNumbers(numbers = []) {
   const unique = new Map();
@@ -24,6 +39,7 @@ export function normalizeIdentity(value = {}) {
   const limits = { label:80,name:40,company:80,language:30,voice:30,role:80,goal:1000,addressMode:20,addressInstructions:500,introduction:600,opening:600,closing:600,instructions:6000,backendModel:50,backendPrompt:6000,reasoningEffort:20 };
   const result = {};
   for (const [key,max] of Object.entries(limits)) result[key] = String(value[key] ?? identityDefaults[key]).trim().slice(0,max);
+  result.language=languageDetails(result.language).name;
   if (!['formal','first-name','full-name','custom'].includes(result.addressMode)) result.addressMode='formal';
   if (!['marin','cedar','quartz','ripple','vesper','willow','stone','gleam'].includes(result.voice)) result.voice='marin';
   if (!['gpt-5.6-luna','gpt-5.6-sol','gpt-6-luna','gpt-6-sol'].includes(result.backendModel)) result.backendModel='gpt-5.6-luna';
@@ -50,6 +66,6 @@ export function buildIdentityPrompt(value, contact='', objective='', {disclosure
     `Call objective: ${objective}`,
     `At a natural end, confirm only verified next steps, then close with: ${renderPhrase(a.closing,a,contact,objective)}`,
     `Additional company guidance: ${a.instructions}`,
-    `The structured identity, ${disclosureAlreadySpoken?'opening, addressing and closing':'introduction, opening, addressing and closing'} fields take precedence over conflicting identity details in additional company guidance. ${disclosureAlreadySpoken?'The opening identifies you as an AI assistant; do not claim to be human or repeat that introduction.':'Always identify yourself as an AI assistant; do not claim to be a human, and add an AI disclosure if an example lacks one.'} Do not speak unresolved template placeholders. Adapt missing-name phrases naturally. If asked to stop, acknowledge politely and stop pursuing the objective. No business-action tools are connected; never invent completed bookings or updates.`
+    `The structured identity, ${disclosureAlreadySpoken?'opening, addressing and closing':'introduction, opening, addressing and closing'} fields take precedence over conflicting identity details in additional company guidance. ${disclosureAlreadySpoken?'The opening identifies you as an AI assistant; do not claim to be human or repeat that introduction.':'Always identify yourself as an AI assistant; do not claim to be a human, and add an AI disclosure if an example lacks one.'} ${languagePolicy(a.language)} Do not speak unresolved template placeholders. Adapt missing-name phrases naturally. If asked to stop, acknowledge politely and stop pursuing the objective. No business-action tools are connected; never invent completed bookings or updates.`
   ].join('\n');
 }

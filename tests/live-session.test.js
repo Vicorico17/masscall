@@ -31,6 +31,13 @@ test('opening instruction resolves agent and contact placeholders without repeat
  assert.ok(prompt.includes('Do not repeat those disclosures'));
 });
 
+test('live call language instruction covers the configured goodbye too',()=>{
+ const session=buildLiveSessionConfig({language:'Italian',closing:'Goodbye for now!'});
+ assert.match(session.instructions,/Speak only in Italian throughout the call/);
+ assert.match(session.instructions,/goodbye in Italian, adapting the configured closing if needed/);
+ assert.match(openingInstructions({language:'Italian',opening:'Bună ziua!'}),/meaning of this configured opening naturally in Italian/);
+});
+
 test('demo calls do not tell the assistant that recording was disclosed',()=>{
  const session=buildLiveSessionConfig({language:'Romanian'},'','',undefined,false);
  const opening=openingInstructions({language:'Romanian'},'','',false);
