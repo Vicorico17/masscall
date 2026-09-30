@@ -18,7 +18,7 @@ test('paid Romanian agent can save a voice and place a recorded call to the veri
  try{
   const agent={name:'Elena',company:'Atelier',goal:'Confirmă programarea',introduction:'Sunt {agent_name}, asistent AI al {company_name}.',voice:'cedar',language:'Romanian'};
   let r=await request('agent',{agent},cookie);assert.equal(r.status,200);assert.equal(r.data.agent.voice,'cedar');assert.ok(savedAccount);
-  r=await request('test-call',{consent:true,recordingConsent:true},cookie);assert.equal(r.status,201);assert.equal(created.get('To'),'+40712345678');assert.equal(created.get('Record'),'true');assert.equal(created.get('RecordingChannels'),'dual');assert.match(created.get('Twiml'),/înregistrat/);
+  r=await request('test-call',{consent:true,recordingConsent:true},cookie);assert.equal(r.status,201);assert.equal(created.get('To'),'+40712345678');assert.equal(created.get('Record'),'true');assert.equal(created.get('RecordingChannels'),'dual');assert.doesNotMatch(created.get('Twiml'),/<Say\b/);assert.match(created.get('Twiml'),/<Connect><Stream/);assert.equal(JSON.parse(Buffer.from([...created.get('Twiml').matchAll(/name="context\d+" value="([^"]+)"/g)].map(match=>match[1]).join(''),'base64url').toString()).recording,true);
  }finally{globalThis.fetch=originalFetch}
 });
 test('customer calls obey Romanian business hours',()=>{
@@ -42,7 +42,7 @@ test('paid contact call uses assigned number, goal, recording and Romanian mobil
  try{
   const data={number:'+40210000123',agent:{name:'Elena',company:'Atelier',goal:'Confirmă o programare',introduction:'Sunt asistentul AI.',language:'Romanian',voice:'cedar'}};
   const call=await premiumContactCall('+40712345678',data,{to:'+40722222222',contact:'Ana Popescu',consent:true,recordingConsent:true},new Date('2026-09-23T10:00:00Z'));
-  assert.match(call.sid,/^CA/);assert.equal(created.get('To'),'+40722222222');assert.equal(created.get('From'),'+40210000123');assert.equal(created.get('Record'),'true');assert.equal(created.get('RecordingChannels'),'dual');assert.match(created.get('Twiml'),/înregistrat/);
+  assert.match(call.sid,/^CA/);assert.equal(created.get('To'),'+40722222222');assert.equal(created.get('From'),'+40210000123');assert.equal(created.get('Record'),'true');assert.equal(created.get('RecordingChannels'),'dual');assert.doesNotMatch(created.get('Twiml'),/<Say\b/);assert.match(created.get('Twiml'),/<Connect><Stream/);assert.equal(JSON.parse(Buffer.from([...created.get('Twiml').matchAll(/name="context\d+" value="([^"]+)"/g)].map(match=>match[1]).join(''),'base64url').toString()).recording,true);
  }finally{globalThis.fetch=originalFetch}
 });
 test('opted-out contacts cannot be called again',async()=>{

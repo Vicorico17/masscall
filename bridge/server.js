@@ -88,6 +88,7 @@ sockets.on('connection',phone=>{
  sendLive({type:'session.instructions.append',event_id:'masscall-opening',delegation_id:null,content:greeting});
  for(const audio of inputQueue){sendLive({type:'session.input_audio.append',audio});if(!sentInput){sentInput=true;log('bridge.first_input_audio_sent',{queued:true})}}inputQueue=[];
  }
+ if(e.type==='session.instructions.appended'&&e.client_event_id==='masscall-opening')log('bridge.opening_instructions_accepted',{callSid});
  if(e.type==='response.event'&&e.event?.type==='response.output_item.done'&&e.event.item?.type==='function_call'&&e.event.item.name==='end_call'){
   let args;try{args=JSON.parse(e.event.item.arguments||'{}')}catch{args={}}
   if(['goal_complete','caller_requested_end'].includes(args.reason)&&typeof e.event.item.call_id==='string')requestCallEnd(e.event.item.call_id,args.reason);

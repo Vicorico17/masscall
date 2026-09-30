@@ -23,12 +23,14 @@ test('GPT-Live omits optional reasoning and web search unless selected but alway
  assert.deepEqual(session.delegation.responses.tools.map(tool=>tool.name),['end_call']);
 });
 
-test('opening instruction resolves agent and contact placeholders without repeating the disclosure',()=>{
+test('opening instruction asks the live agent to speak immediately with natural identity and recording context',()=>{
  const prompt=openingInstructions({name:'Mihai',company:'Firma B',language:'Romanian',introduction:'Sunt {agent_name}, asistent AI la {company_name}.',opening:'Bună ziua, {first_name}!',closing:'La revedere!'},'Ioana Ionescu','Confirmă programarea');
- assert.ok(!prompt.includes('Sunt Mihai, asistent AI la Firma B.'));
+ assert.match(prompt,/Begin speaking immediately/);
+ assert.match(prompt,/recording notice conversational, not like a separate announcement/);
+ assert.match(prompt,/Sunt Mihai, asistent AI la Firma B\./);
  assert.ok(prompt.includes('Bună ziua, Ioana!'));
  assert.ok(!prompt.includes('{first_name}'));
- assert.ok(prompt.includes('Do not repeat those disclosures'));
+ assert.match(prompt,/pause and listen/);
 });
 
 test('live call language instruction covers the configured goodbye too',()=>{
@@ -50,10 +52,10 @@ test('per-call plan controls the opening, discussion points, closing and hangup 
  assert.match(openingInstructions({language:'Italian'},'Ana','Qualify a lead',true,{opening:'Ask if now is a good time.'}),/Ask if now is a good time/);
 });
 
-test('demo calls do not tell the assistant that recording was disclosed',()=>{
+test('demo calls identify the AI but do not mention recording',()=>{
  const session=buildLiveSessionConfig({language:'Romanian'},'','',undefined,false);
  const opening=openingInstructions({language:'Romanian'},'','',false);
- assert.match(session.instructions,/clear AI identity disclosure/);
+ assert.match(session.instructions,/Always identify yourself as an AI assistant/);
  assert.doesNotMatch(session.instructions,/recording disclosure/);
  assert.doesNotMatch(opening,/call is recorded/i);
 });
