@@ -8,7 +8,7 @@ export const identityDefaults = {
   opening: 'Bună ziua! Vorbesc cu {full_name}? Aveți un moment pentru o scurtă discuție?',
   closing: 'Vă mulțumesc pentru timpul acordat. Vă doresc o zi frumoasă!',
   instructions: 'Vorbește natural și politicos. Explică scopul apelului și ascultă cu atenție. Confirmă următorul pas. Nu pretinde că ai făcut programări sau modificări fără un instrument conectat.',
-  backendModel: 'gpt-5.6-luna', backendPrompt: 'Help the voice assistant with the stated call objective. Use web search only when enabled. No company functions are connected; do not claim that you completed external actions.',
+  backendModel: 'gpt-6-luna', backendPrompt: 'Help the voice assistant with the stated call objective. Use web search only when enabled. No company functions are connected; do not claim that you completed external actions.',
   reasoningEffort: '', webSearch: false
 };
 export const supportedLanguages = [
@@ -42,7 +42,9 @@ export function normalizeIdentity(value = {}) {
   result.language=languageDetails(result.language).name;
   if (!['formal','first-name','full-name','custom'].includes(result.addressMode)) result.addressMode='formal';
   if (!['marin','cedar','quartz','ripple','vesper','willow','stone','gleam'].includes(result.voice)) result.voice='marin';
-  if (!['gpt-5.6-luna','gpt-5.6-sol','gpt-6-luna','gpt-6-sol'].includes(result.backendModel)) result.backendModel='gpt-5.6-luna';
+  // Move existing workspaces off the previous default, including any legacy Terra setting.
+  if (['gpt-5.6-luna','gpt-5.6-terra'].includes(result.backendModel)) result.backendModel='gpt-6-luna';
+  if (!['gpt-6-luna','gpt-6-sol','gpt-5.6-sol'].includes(result.backendModel)) result.backendModel='gpt-6-luna';
   if (!['','low','medium','high'].includes(result.reasoningEffort)) result.reasoningEffort='';
   result.webSearch=value.webSearch===true||value.webSearch==='true';
   return result;

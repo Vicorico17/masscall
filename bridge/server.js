@@ -20,7 +20,7 @@ const server=http.createServer(async(req,res)=>{
   const body=JSON.parse(raw||'{}');
   if(pathname==='/rehearsal'){
    let rehearsal;try{rehearsal=normalizeRehearsalRequest(body)}catch(error){return reply(res,400,{error:error.message||'Invalid rehearsal request.'})}
-   const generated=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:rehearsal.agent.backendModel||process.env.OPENAI_BACKEND_MODEL||'gpt-5.6-luna',instructions:rehearsalInstructions(rehearsal),input:rehearsalInput(rehearsal),text:{format:{type:'json_object'}},max_output_tokens:350,store:false}),signal:AbortSignal.timeout(30000)});
+   const generated=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:rehearsal.agent.backendModel||process.env.OPENAI_BACKEND_MODEL||'gpt-6-luna',instructions:rehearsalInstructions(rehearsal),input:rehearsalInput(rehearsal),text:{format:{type:'json_object'}},max_output_tokens:350,store:false}),signal:AbortSignal.timeout(30000)});
    const result=await generated.json().catch(()=>({}));if(!generated.ok){log('bridge.rehearsal_provider_error',{status:generated.status});return reply(res,502,{error:'OpenAI could not run this rehearsal. Check the selected model and API access.'})}
    const output=(result.output||[]).flatMap(item=>item.content||[]).filter(item=>item.type==='output_text').map(item=>item.text||'').join('');let turn;try{turn=JSON.parse(output)}catch{return reply(res,502,{error:'OpenAI returned an incomplete rehearsal turn. Please try again.'})}
    const message=String(turn.reply||'').trim().slice(0,1500);if(!message||typeof turn.callComplete!=='boolean')return reply(res,502,{error:'OpenAI returned an incomplete rehearsal turn. Please try again.'});
@@ -30,7 +30,7 @@ const server=http.createServer(async(req,res)=>{
   if(!prompt||prompt.length>4000)return reply(res,400,{error:'Enter a prompt of up to 4,000 characters.'});
   const agent=body.agent&&typeof body.agent==='object'?body.agent:{};
   const input=`Create two compatible prompts for a GPT-Live telephone assistant from the following request. Keep the live voice prompt concise and focused on role, speech style, conversation behavior, and when to delegate. Put task procedures, research guidance, and verification rules in the delegated Responses prompt. Do not invent integrations or claim the assistant can take actions unless explicitly described. Return a JSON object with string properties livePrompt and backendPrompt only.\n\nAgent: ${JSON.stringify({name:agent.name,company:agent.company,language:agent.language,goal:agent.goal})}\n\nUser request:\n${prompt}`;
-  const generated=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:agent.backendModel||process.env.OPENAI_BACKEND_MODEL||'gpt-5.6-luna',instructions:'Generate safe, clear instructions for a phone AI. The voice prompt should fit GPT-Live. The backend prompt is for delegated Responses reasoning and tools. Output valid JSON only.',input,text:{format:{type:'json_object'}},max_output_tokens:1800}),signal:AbortSignal.timeout(55000)});
+  const generated=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:agent.backendModel||process.env.OPENAI_BACKEND_MODEL||'gpt-6-luna',instructions:'Generate safe, clear instructions for a phone AI. The voice prompt should fit GPT-Live. The backend prompt is for delegated Responses reasoning and tools. Output valid JSON only.',input,text:{format:{type:'json_object'}},max_output_tokens:1800}),signal:AbortSignal.timeout(55000)});
   const result=await generated.json().catch(()=>({}));
   if(!generated.ok)return reply(res,502,{error:result.error?.message||'OpenAI could not generate prompts.'});
   const text=(result.output||[]).flatMap(item=>item.content||[]).filter(item=>item.type==='output_text').map(item=>item.text||'').join('');
@@ -75,7 +75,7 @@ sockets.on('connection',phone=>{
  streamSid=event.start.streamSid;callSid=event.start.callSid;clearTimeout(startupTimeout);log('bridge.twilio_stream_started',{callSid});
  live=new WebSocket('wss://api.openai.com/v1/live/sessions',{headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},handshakeTimeout:10000});
  live.on('open',()=>{
- const session=buildLiveSessionConfig(data.agent,data.contact,data.objective,process.env.OPENAI_BACKEND_MODEL||'gpt-5.6-luna',data.recording!==false,data.callPlan);
+ const session=buildLiveSessionConfig(data.agent,data.contact,data.objective,process.env.OPENAI_BACKEND_MODEL||'gpt-6-luna',data.recording!==false,data.callPlan);
  if(!voices.has(session.audio.output.voice))session.audio.output.voice='marin';
  log('bridge.openai_connected',{model:session.model,voice:session.audio.output.voice});
  sendLive({type:'session.start',session});
