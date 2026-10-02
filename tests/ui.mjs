@@ -63,12 +63,22 @@ try {
   await page.getByLabel('Workspace access token').fill('valid-test-workspace-token-123');
   await page.getByRole('button', { name: 'Connect workspace' }).click();
   await page.getByRole('heading', { name: 'Your call center' }).waitFor();
+  assert.equal(await page.locator('#real-call-card').isVisible(), true);
+  assert.equal(await page.locator('#people-management').isVisible(), false);
+  await page.getByRole('button', { name: 'People', exact: true }).click();
+  assert.equal(await page.locator('#people-management').isVisible(), true);
+  assert.equal(await page.locator('#real-call-card').isVisible(), false);
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
+  assert.equal(await page.locator('#real-call-card').isVisible(), true);
   assert.equal(await page.locator('#real-from option').count(), 2); // placeholder plus one unique number
+  await page.getByText('Rename this Twilio number').click();
   await page.getByLabel('Twilio number name').fill('Support line');
   await page.getByRole('button', { name: 'Save number name' }).click();
   await page.locator('#real-from option').filter({ hasText: 'Support line' }).waitFor();
   await page.getByRole('button', { name: 'Edit this number’s agent' }).click();
   await page.getByRole('button', { name: 'Agent', exact: true }).waitFor();
+  assert.equal(await page.locator('#live-studio-slot').isVisible(), true);
+  assert.equal(await page.locator('#real-call-card').isVisible(), false);
   await page.getByRole('button', { name: 'Back to dashboard' }).click();
   assert.equal(await page.locator('.live-workspace-tabs button.active').innerText(), 'Dashboard');
   await page.waitForFunction(() => {
@@ -94,7 +104,7 @@ try {
   await page.getByLabel('Destination phone').fill('+40735577052');
   await page.getByLabel('I have permission to call this person.').check();
   await page.getByLabel(/required consent to record/).check();
-  await page.getByRole('button', {name:'Call & record conversation'}).click();
+  await page.getByRole('button', {name:'Start call', exact:true}).click();
   await page.getByRole('button', {name:'Review outcome'}).waitFor();
   await page.getByRole('button', {name:'Review outcome'}).click();
   await page.getByLabel('Call result').selectOption('follow_up');
