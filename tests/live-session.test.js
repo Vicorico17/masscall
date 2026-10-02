@@ -9,10 +9,14 @@ test('GPT-Live session applies the selected voice, Responses model, reasoning an
  assert.equal(session.delegation.type,'responses');
  assert.equal(session.delegation.responses.model,'gpt-6-luna');
  assert.deepEqual(session.delegation.responses.reasoning,{effort:'medium'});
- assert.deepEqual(session.delegation.responses.tools,[{type:'function',name:'end_call',description:'End this phone call after the objective has been completed or the caller clearly asks to stop.',parameters:{type:'object',properties:{reason:{type:'string',enum:['goal_complete','caller_requested_end']}},required:['reason'],additionalProperties:false},strict:true},{type:'web_search'}]);
+ assert.deepEqual(session.delegation.responses.tools,[{type:'function',name:'end_call',description:'End this phone call after the objective is complete or the caller clearly asks to stop.',parameters:{type:'object',properties:{reason:{type:'string',enum:['goal_complete','caller_requested_end']}},required:['reason'],additionalProperties:false},strict:true},{type:'web_search'}]);
  assert.match(session.delegation.responses.instructions,/Research current opening hours\./);
- assert.match(session.delegation.responses.instructions,/use the end_call function only when the caller clearly asks to stop or the call completion condition is met/);
- assert.match(session.instructions,/invoke end_call promptly/);
+ assert.match(session.delegation.responses.instructions,/# Backend task/);
+ assert.match(session.instructions,/# Backchannel policy/);
+ assert.match(session.instructions,/# Interruption policy/);
+ assert.match(session.instructions,/# Delegation policy/);
+ assert.match(session.instructions,/Delegate to the backend when/);
+ assert.match(session.instructions,/Do not delegate to the backend when/);
 });
 
 test('GPT-Live omits optional reasoning and web search unless selected but always provides call control',()=>{
@@ -25,21 +29,22 @@ test('GPT-Live omits optional reasoning and web search unless selected but alway
 
 test('opening instruction asks the live agent to speak immediately with natural identity and recording context',()=>{
  const prompt=openingInstructions({name:'Mihai',company:'Firma B',language:'Romanian',introduction:'Sunt {agent_name}, asistent AI la {company_name}.',opening:'Bună ziua, {first_name}!',closing:'La revedere!'},'Ioana Ionescu','Confirmă programarea');
- assert.match(prompt,/Begin speaking immediately/);
- assert.match(prompt,/recording notice conversational, not like a separate announcement/);
+ assert.match(prompt,/Begin now with one short, warm greeting/);
+ assert.match(prompt,/do not make it a separate announcement/);
  assert.match(prompt,/Sunt Mihai, asistent AI la Firma B\./);
  assert.ok(prompt.includes('Bună ziua, Ioana!'));
  assert.ok(!prompt.includes('{first_name}'));
  assert.match(prompt,/pause and listen/);
+ assert.match(prompt,/Do not recite the introduction and opening as separate scripts/);
 });
 
 test('live call language instruction covers the configured goodbye too',()=>{
  const session=buildLiveSessionConfig({language:'Italian',closing:'Goodbye for now!'});
  assert.match(session.instructions,/Speak only in Italian throughout the call/);
- assert.match(session.instructions,/goodbye in Italian, adapting the configured closing if needed/);
+ assert.match(session.instructions,/friendly goodbye in Italian/);
  assert.match(session.instructions,/visit masscall\.vercel\.app to learn about Masscall voice AI agents/);
- assert.match(session.instructions,/When the caller clearly asks to end the conversation, invoke end_call promptly and skip any promotion/);
- assert.match(openingInstructions({language:'Italian',opening:'Bună ziua!'}),/meaning of this configured opening naturally in Italian/);
+ assert.match(session.instructions,/For a caller-requested stop, skip promotion and end promptly/);
+ assert.match(openingInstructions({language:'Italian',opening:'Bună ziua!'}),/naturally convey this opening/);
 });
 
 test('per-call plan controls the opening, discussion points, closing and hangup condition',()=>{
@@ -47,15 +52,15 @@ test('per-call plan controls the opening, discussion points, closing and hangup 
  assert.match(session.instructions,/Ask if now is a good time/);
  assert.match(session.instructions,/Understand their current needs/);
  assert.match(session.instructions,/They agree on a next step or clearly decline/);
- assert.match(session.instructions,/give a friendly, brief goodbye in Italian/);
- assert.match(session.delegation.responses.instructions,/Completion condition: They agree on a next step/);
+ assert.match(session.instructions,/friendly goodbye in Italian/);
+ assert.match(session.instructions,/Completion condition: They agree on a next step/);
  assert.match(openingInstructions({language:'Italian'},'Ana','Qualify a lead',true,{opening:'Ask if now is a good time.'}),/Ask if now is a good time/);
 });
 
 test('demo calls identify the AI but do not mention recording',()=>{
  const session=buildLiveSessionConfig({language:'Romanian'},'','',undefined,false);
  const opening=openingInstructions({language:'Romanian'},'','',false);
- assert.match(session.instructions,/Always identify yourself as an AI assistant/);
+ assert.match(session.instructions,/Never claim to be human/);
  assert.doesNotMatch(session.instructions,/recording disclosure/);
  assert.doesNotMatch(opening,/call is recorded/i);
 });
