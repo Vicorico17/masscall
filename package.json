@@ -7,10 +7,15 @@
     "dev": "node server.js",
     "start": "node server.js",
     "bridge": "node bridge/server.js",
+    "livekit-agent": "node livekit/agent.js start",
     "test": "node --test tests/*.test.js",
     "test:ui": "node tests/ui.mjs"
   },
   "dependencies": {
+    "@livekit/agents": "^1.9.1",
+    "@livekit/agents-plugin-openai": "^1.9.1",
+    "@livekit/protocol": "^1.52.1",
+    "livekit-server-sdk": "^2.19.1",
     "ws": "^8.21.3"
   },
   "devDependencies": {

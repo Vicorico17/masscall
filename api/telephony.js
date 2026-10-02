@@ -2,10 +2,12 @@ import { normalizeIdentity } from '../public/identity.js';
 import {authorize,twilio,readBody,json} from '../lib/telephony.js';
 import {buildCallTwiml} from '../lib/call-context.js';
 import {normalizeCallPlan} from '../lib/call-plan.js';
+import {createLiveKitTwilioCall,liveKitCallConfigured} from '../lib/livekit-telephony.js';
 export default async function handler(req,res){
  if(!authorize(req))return json(res,401,{error:'Workspace authentication required.'});
  try{
  const url=new URL(req.url,'http://localhost'),action=url.searchParams.get('action');
+ if(req.method==='GET'&&action==='engine-config')return json(res,200,{livekitEnabled:process.env.ENABLE_LIVEKIT_TEST_CALLS==='true'&&liveKitCallConfigured()});
  if(req.method==='GET'&&action==='numbers')return json(res,200,await twilio('IncomingPhoneNumbers.json?PageSize=100'));
  if(req.method==='GET'&&action==='search'){
  const country=url.searchParams.get('country')||'RO',digits=url.searchParams.get('digits')||'';
@@ -45,10 +47,15 @@ export default async function handler(req,res){
  }
  if(action==='call'){
  if(process.env.ENABLE_LIVE_CALLS!=='true')return json(res,403,{error:'Live calls are disabled.'});
+ const engine=body.engine==='livekit'?'livekit':'bridge';
  const bridge=String(process.env.VOICE_BRIDGE_URL||'').trim(),bridgeSecret=String(process.env.VOICE_BRIDGE_SECRET||'').trim();
- if(!bridge)return json(res,503,{error:'This Vercel deployment is not receiving VOICE_BRIDGE_URL. Check its Production environment settings, then redeploy.'});
- if(!/^wss:\/\/[^/?#\s]+\/media$/.test(bridge))return json(res,503,{error:`VOICE_BRIDGE_URL is present but invalid. The deployed function received ${JSON.stringify(bridge.slice(0,200))}. Set it to wss://<bridge-host>/media with no quotes, query, or trailing slash.`});
- if(!bridgeSecret)return json(res,503,{error:'This Vercel deployment is not receiving VOICE_BRIDGE_SECRET. Check its Production environment settings, then redeploy.'});
+ if(engine==='livekit'){
+  if(process.env.ENABLE_LIVEKIT_TEST_CALLS!=='true'||!liveKitCallConfigured())return json(res,503,{error:'LiveKit comparison calls are not configured. Add the LiveKit project URL, API key, and API secret to Vercel and Render, enable the agent on Render, and set ENABLE_LIVEKIT_TEST_CALLS on Vercel.'});
+ }else{
+  if(!bridge)return json(res,503,{error:'This Vercel deployment is not receiving VOICE_BRIDGE_URL. Check its Production environment settings, then redeploy.'});
+  if(!/^wss:\/\/[^/?#\s]+\/media$/.test(bridge))return json(res,503,{error:`VOICE_BRIDGE_URL is present but invalid. The deployed function received ${JSON.stringify(bridge.slice(0,200))}. Set it to wss://<bridge-host>/media with no quotes, query, or trailing slash.`});
+  if(!bridgeSecret)return json(res,503,{error:'This Vercel deployment is not receiving VOICE_BRIDGE_SECRET. Check its Production environment settings, then redeploy.'});
+ }
  if(!/^\+[1-9]\d{7,14}$/.test(body.to||'')||!/^\+[1-9]\d{7,14}$/.test(body.from||''))return json(res,400,{error:'Use international phone numbers such as +407xxxxxxxx.'});
  if(body.consent!==true||body.recordingConsent!==true)return json(res,400,{error:'Calling permission and recording consent are required.'});
  const owned=await twilio('IncomingPhoneNumbers.json?PhoneNumber='+encodeURIComponent(body.from));if(!owned.incoming_phone_numbers?.some(n=>n.phone_number===body.from))return json(res,400,{error:'Caller ID must belong to this workspace.'});
@@ -56,8 +63,9 @@ export default async function handler(req,res){
  const agent=normalizeIdentity(body.agent);
  const contact=String(body.contact||'').trim().slice(0,80);
  const callPlan=normalizeCallPlan(body.callPlan);
- const twiml=buildCallTwiml({bridge,secret:bridgeSecret,agent,contact,objective,callPlan,recording:true});
- const call=await twilio('Calls.json','POST',{To:body.to,From:body.from,Twiml:twiml,Record:'true',RecordingChannels:'dual',RecordingTrack:'both',TimeLimit:'300',Timeout:'25'});
+ const call=engine==='livekit'
+  ?await createLiveKitTwilioCall({to:body.to,from:body.from,agent,contact,objective,callPlan})
+  :await twilio('Calls.json','POST',{To:body.to,From:body.from,Twiml:buildCallTwiml({bridge,secret:bridgeSecret,agent,contact,objective,callPlan,recording:true}),Record:'true',RecordingChannels:'dual',RecordingTrack:'both',TimeLimit:'300',Timeout:'25'});
  return json(res,201,call);
  }
  if(action==='hangup'){

@@ -1,6 +1,7 @@
 import { buildLiveSessionConfig, openingInstructions } from '../lib/live-session.js';
 import http from 'node:http';
 import {createHmac} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
 import WebSocket,{WebSocketServer} from 'ws';
 import {equal,twilio} from '../lib/telephony.js';
 import {verifyStreamSignature} from '../lib/twilio-stream-signature.js';
@@ -10,9 +11,21 @@ const missing=required.filter(key=>!process.env[key]?.trim());
 if(missing.length)throw new Error(`Missing bridge environment variables: ${missing.join(', ')}`);
 const reply=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data))};
 const log=(event,details={})=>console.log(JSON.stringify({event,...details}));
+const livekitAgentName=()=>String(process.env.LIVEKIT_AGENT_NAME||'masscall-call-agent');
+let livekitAgentWorker;
+async function livekitWorkerReady(){
+ if(process.env.ENABLE_LIVEKIT_AGENT!=='true'||!livekitAgentWorker)return false;
+ const port=Number(process.env.LIVEKIT_WORKER_PORT||8081);
+ try{
+  const [health,worker]=await Promise.all([fetch(`http://127.0.0.1:${port}/`,{signal:AbortSignal.timeout(1200)}),fetch(`http://127.0.0.1:${port}/worker`,{signal:AbortSignal.timeout(1200)})]);
+  const info=worker.ok?await worker.json():{};
+  return health.ok&&worker.ok&&info.agent_name===livekitAgentName();
+ }catch{return false}
+}
 const server=http.createServer(async(req,res)=>{
  const pathname=new URL(req.url,'http://localhost').pathname;
  if(req.method==='GET'&&pathname==='/health')return reply(res,200,{status:'ok'});
+ if(req.method==='GET'&&pathname==='/livekit-health'){const ready=await livekitWorkerReady();return reply(res,ready?200:503,{ready,agentName:livekitAgentName()})}
  if(req.method!=='POST'||!['/prompts','/rehearsal'].includes(pathname))return reply(res,404,{error:'Not found.'});
  if(!equal(req.headers.authorization,`Bearer ${process.env.VOICE_BRIDGE_SECRET}`))return reply(res,401,{error:'Authentication required.'});
  try{
@@ -108,4 +121,16 @@ sockets.on('connection',phone=>{
  else if(event.event==='stop'){stop();phone.close()}
  }catch(error){log('bridge.twilio_message_rejected',{message:String(error.message||'unknown').slice(0,200)});phone.close(1008,'Invalid stream');stop()}});
 });
-server.listen(Number(process.env.PORT||process.env.BRIDGE_PORT||3001),'0.0.0.0',()=>console.log('Voice bridge is listening'));
+server.listen(Number(process.env.PORT||process.env.BRIDGE_PORT||3001),'0.0.0.0',()=>{
+ console.log('Voice bridge is listening');
+ if(process.env.ENABLE_LIVEKIT_AGENT!=='true')return;
+ void (async()=>{
+  try{
+   const {AgentServer,ServerOptions}=await import('@livekit/agents');
+   const agentFile=fileURLToPath(new URL('../livekit/agent.js',import.meta.url));
+   livekitAgentWorker=new AgentServer(new ServerOptions({agent:agentFile,agentName:livekitAgentName(),numIdleProcesses:1,port:Number(process.env.LIVEKIT_WORKER_PORT||8081),production:true}));
+   livekitAgentWorker.event.on('worker_registered',workerId=>log('bridge.livekit_agent_registered',{agentName:livekitAgentName(),workerId}));
+   livekitAgentWorker.run().catch(error=>{livekitAgentWorker=undefined;log('bridge.livekit_agent_failed',{message:String(error?.message||'unknown').slice(0,200)})});
+  }catch(error){livekitAgentWorker=undefined;log('bridge.livekit_agent_start_failed',{message:String(error?.message||'unknown').slice(0,200)})}
+ })();
+});

@@ -4,6 +4,9 @@
     { "src": "api/*.js", "use": "@vercel/node" },
     { "src": "public/**", "use": "@vercel/static" }
   ],
+  "functions": {
+    "api/telephony.js": { "maxDuration": 30 }
+  },
   "routes": [
     { "src": "/api/config", "dest": "/api/config.js" },
     { "src": "/api/telephony", "dest": "/api/telephony.js" },
