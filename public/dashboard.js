@@ -1,3 +1,4 @@
+import {templateGallery,updateTemplateGallery} from './template-gallery.js';
 import { dedupePhoneNumbers, identityDefaults, languageDetails, languageOptions, numberKey, normalizeIdentity, renderPhrase } from './identity.js';
 import { initLocale } from './locale.js';
 import { callStarters } from './call-starters.js';
@@ -72,6 +73,7 @@ function setupQuickCall(draft){
  const form=document.querySelector('#real-call');
  const field=document.createElement('div');field.className='field quick-template-field';
  field.innerHTML=`<label for="call-template">1. Alege șablonul apelului</label><select id="call-template" name="callTemplate"><option value="">Alege un șablon…</option><optgroup label="Șabloane predefinite">${callStarters.map(t=>`<option value="starter:${esc(t.id)}">${esc(t.name)}</option>`).join('')}</optgroup>${state.callTemplates.length?`<optgroup label="Șabloanele tale">${state.callTemplates.map(t=>`<option value="saved:${esc(t.id)}">${esc(t.name)}</option>`).join('')}</optgroup>`:''}<option value="custom">Obiectiv propriu · modul Complex</option></select><small>Șablonul pregătește conversația. Tu stabilești exact ce vrei să obții.</small>`;
+ field.insertAdjacentHTML('beforeend',templateGallery(callStarters,esc));
  form.prepend(field);
  const goal=form.elements.objective.closest('.field');field.after(goal);goal.classList.add('quick-goal-field');goal.querySelector('label').textContent='2. Ce vrei să obții din apel?';goal.querySelector('small').textContent='Adaugă detaliile concrete: ce să întrebe, ce informații să ofere și ce rezultat urmărești.';
  form.elements.to.placeholder='+407xxxxxxxx';form.elements.to.maxLength=32;form.elements.to.removeAttribute('pattern');
@@ -81,6 +83,9 @@ function setupQuickCall(draft){
  form.elements.templateId.closest('.field').hidden=true;document.querySelector('.call-starter-picker').hidden=true;
  const saveButton=document.querySelector('#save-call-as-template');goal.append(saveButton);
  const picker=field.querySelector('select');
+ const syncGallery=()=>updateTemplateGallery(field,picker.value,resolveCallTemplate(picker.value,state.callTemplates),esc);
+ picker.addEventListener('change',syncGallery);
+ field.querySelector('.template-gallery').addEventListener('click',event=>{const card=event.target.closest('[data-template-card]');if(!card||card.dataset.templateCard===picker.value)return;picker.value=card.dataset.templateCard;picker.dispatchEvent(new Event('change'));});
  picker.addEventListener('change',()=>{
   if(picker.value==='custom'){setCallMode('complex');form.elements.templateId.value='';form.elements.starterName.value='';document.querySelector('#real-starter').value='';selectedBranchPreview([]);return}
   const template=resolveCallTemplate(picker.value,state.callTemplates);if(!template)return;
@@ -91,6 +96,7 @@ function setupQuickCall(draft){
  });
  picker.value=draft?.callTemplate||(form.elements.templateId.value?'saved:'+form.elements.templateId.value:document.querySelector('#real-starter').value?'starter:'+document.querySelector('#real-starter').value:'starter:test-conversation');
  if(!draft){picker.dispatchEvent(new Event('change'))}
+ syncGallery();
  if(!state.people.length)form.elements.personId.closest('.field').hidden=true;
  const status=document.createElement('section');status.id='test-call-status';status.className='test-call-status';status.setAttribute('aria-live','polite');status.hidden=true;form.before(status);
  document.querySelector('#real-call-card > .inline-note').hidden=true;document.querySelector('#breadcrumb-current').textContent='Centrul de apeluri';const switcher=document.querySelector('.call-mode-switch');const tabs=document.querySelector('.live-workspace-tabs');tabs.before(switcher);
@@ -196,7 +202,7 @@ function bindCampaignManager(campaigns){
  });
  document.querySelectorAll('[data-campaign-cancel]').forEach(button=>button.addEventListener('click',async()=>{button.disabled=true;try{await campaignRequest('cancel',{id:button.dataset.campaignCancel});toast('Campaign cancelled.');await liveConsole()}catch(error){toast(error.message);button.disabled=false}}));
 }
-function fillTemplateFields(template){const form=document.querySelector('#real-call'),identity=identityFor(form.elements.from.value);form.elements.objective.value=template?.objective||identity.goal;form.elements.opening.value=template?.opening||identity.opening;form.elements.talkingPoints.value=template?.talkingPoints||'';form.elements.closing.value=template?.closing||identity.closing;form.elements.completionTrigger.value=template?.completionTrigger||'Obiectivul de mai sus a fost îndeplinit sau persoana cere încheierea apelului.';selectedBranchPreview(template?.branches||[]);form.elements.objective.dataset.edited='true';const picker=form.elements.callTemplate;if(picker&&form.elements.templateId.value)picker.value='saved:'+form.elements.templateId.value}
+function fillTemplateFields(template){const form=document.querySelector('#real-call'),identity=identityFor(form.elements.from.value);form.elements.objective.value=template?.objective||identity.goal;form.elements.opening.value=template?.opening||identity.opening;form.elements.talkingPoints.value=template?.talkingPoints||'';form.elements.closing.value=template?.closing||identity.closing;form.elements.completionTrigger.value=template?.completionTrigger||'Obiectivul de mai sus a fost îndeplinit sau persoana cere încheierea apelului.';selectedBranchPreview(template?.branches||[]);form.elements.objective.dataset.edited='true';const picker=form.elements.callTemplate;if(picker&&form.elements.templateId.value)picker.value='saved:'+form.elements.templateId.value;const gallery=document.querySelector('.quick-template-field');if(gallery&&picker)updateTemplateGallery(gallery,picker.value,template,esc)}
 function fillPersonIntoCall(person){if(!person)return;const form=document.querySelector('#real-call');form.elements.personId.value=person.id;form.elements.contact.value=person.name;form.elements.to.value=person.phone;form.elements.personCategory.value=person.category;form.elements.personCompany.value=person.company;form.elements.personRole.value=person.role;form.elements.personNotes.value=person.notes;document.querySelector('#selected-person-summary').textContent=[person.category,person.company,person.role].filter(Boolean).join(' · ')||'Saved contact';showLivePanel('dashboard')}
 function editDirectoryPerson(person){const form=document.querySelector('#person-form');for(const key of ['id','name','phone','category','company','role','notes'])form.elements[key].value=person[key]||'';form.elements.callConsent.checked=person.callConsent===true;form.elements.recordingConsent.checked=person.recordingConsent===true;document.querySelector('#save-person').textContent='Update person';document.querySelector('#person-form').scrollIntoView({behavior:'smooth',block:'center'})}
 function editCallTemplate(template){const form=document.querySelector('#template-form');for(const key of ['id','name','category','objective','opening','talkingPoints','closing','completionTrigger'])form.elements[key].value=template[key]||'';setBranchEditor(document.querySelector('#template-branches'),template.branches||[]);document.querySelector('#save-template').textContent='Update template';showLivePanel('templates')}
