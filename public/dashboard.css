@@ -46,3 +46,15 @@ body.call-center .sidebar>:not(.brand){display:none}.number-label-editor{padding
 .rehearsal-messages{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow:auto;padding:13px;background:#faf9fc;border:1px solid var(--line);border-radius:9px}.rehearsal-message{max-width:88%;padding:10px 12px;border-radius:10px;background:white;border:1px solid #eceaf0}.rehearsal-message.agent{align-self:flex-start}.rehearsal-message.caller{align-self:flex-end;background:#f0ebff;border-color:#e5def7}.rehearsal-message small{font-size:8px;letter-spacing:.6px;color:#8d849e;font-weight:700}.rehearsal-message p{font-size:12px;line-height:1.6;margin:4px 0 0;white-space:pre-wrap}.rehearsal-form{display:flex;gap:8px;align-items:flex-end}.rehearsal-form textarea{flex:1;min-width:0;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:10px}.rehearsal-status{margin:10px 0}.call-plan-settings+.full{margin:5px 0 16px}
 .call-review-form .field{margin:12px 0}.call-review-form label{display:block;margin-bottom:6px;font-size:10px;font-weight:600;color:#626a79}.call-review-form input,.call-review-form textarea,.call-review-form select{width:100%;border:1px solid var(--line);border-radius:7px;padding:10px;font-size:11px}.call-review-form .modal-actions{justify-content:flex-end;margin-top:16px}#call-logs td:first-child strong{display:block;font-size:11px}#call-logs td:first-child small,#call-logs td:nth-last-child(2) small{display:block;margin-top:4px;max-width:240px;line-height:1.5;color:#939aaa;font-size:9px;white-space:normal}
 .live-panel-layout{display:block}.live-panel-layout>[hidden]{display:none!important}.live-workspace-tabs button[aria-current="page"]{box-shadow:inset 0 -2px var(--purple)}
+#real-call-card>.call-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px;margin:-5px 0 13px;border:1px solid #ebe7f3;border-radius:10px;background:#f7f6fa}
+.call-mode-switch button{display:flex;flex-direction:column;gap:4px;padding:12px 14px;text-align:left;border:1px solid transparent;border-radius:7px;background:transparent;color:#777183;cursor:pointer}
+.call-mode-switch button.active{background:#fff;border-color:#e4ddf1;color:#57437f;box-shadow:0 2px 7px #3930470c}
+.call-mode-switch strong{font-size:12px}.call-mode-switch small{font-size:9px;color:#9993a4}
+.call-mode-description{margin:0 0 20px;color:#8e8999;font-size:10px;line-height:1.6}
+.call-mode-description[data-complex-description]{display:none}
+#real-call[data-mode="simple"] .complex-only{display:none!important}
+#real-call[data-mode="simple"] #real-objective{min-height:82px}
+#real-call-card[data-call-mode="complex"] .call-mode-description[data-simple-description]{display:none}
+#real-call-card[data-call-mode="complex"] .call-mode-description[data-complex-description]{display:block}
+.call-starter-picker .inline-form{align-items:center}
+@media(max-width:620px){#real-call-card>.call-mode-switch{gap:5px}.call-mode-switch button{padding:10px}.call-mode-switch small{line-height:1.4}}
