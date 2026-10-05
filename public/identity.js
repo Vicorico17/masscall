@@ -1,10 +1,10 @@
 // Shared identity contract for the editor, call snapshots, and voice bridge.
 export const identityDefaults = {
-  label: 'Recepție', name: 'Andreea', company: 'Studio România', language: 'Romanian',
+  label: 'Recepție', name: 'Andreea', company: 'Vico', language: 'Romanian',
   voice: 'marin', role: 'Customer care', addressMode: 'formal',
   goal: 'Confirmă programarea și află dacă ora este potrivită.',
   addressInstructions: 'Folosește un ton politicos. Nu presupune genul sau titlul persoanei.',
-  introduction: 'Sunt {agent_name}, asistentul AI al companiei {company_name}.',
+  introduction: 'Sunt {agent_name}, agentul AI al lui {company_name}.',
   opening: 'Bună ziua! Vorbesc cu {full_name}? Aveți un moment pentru o scurtă discuție?',
   closing: 'Vă mulțumesc pentru timpul acordat. Vă doresc o zi frumoasă!',
   instructions: 'Vorbește natural și politicos. Explică scopul apelului și ascultă cu atenție. Confirmă următorul pas. Nu pretinde că ai făcut programări sau modificări fără un instrument conectat.',
@@ -48,6 +48,22 @@ export function normalizeIdentity(value = {}) {
   if (!['','low','medium','high'].includes(result.reasoningEffort)) result.reasoningEffort='';
   result.webSearch=value.webSearch===true||value.webSearch==='true';
   return result;
+}
+export function vicoIntroduction(value = {}) {
+  const agent=normalizeIdentity(value);
+  const intros={
+    English:`I'm ${agent.name}, Vico's AI agent.`,
+    Romanian:`Sunt ${agent.name}, agentul AI al lui Vico.`,
+    Italian:`Sono ${agent.name}, l'agente IA di Vico.`,
+    Spanish:`Soy ${agent.name}, el agente de IA de Vico.`,
+    French:`Je suis ${agent.name}, l’agent IA de Vico.`,
+    German:`Ich bin ${agent.name}, Vicos KI-Agent.`,
+    Portuguese:`Sou ${agent.name}, agente de IA da Vico.`,
+    Dutch:`Ik ben ${agent.name}, de AI-agent van Vico.`,
+    Polish:`Jestem ${agent.name}, agentem AI Vico.`,
+    Turkish:`Ben ${agent.name}, Vico'nun yapay zekâ asistanıyım.`
+  };
+  return intros[agent.language]||intros.English;
 }
 export function renderPhrase(phrase, identity, contact='', objective='') {
   const values={agent_name:identity.name,company_name:identity.company,first_name:contact.trim().split(/\s+/)[0]||'',full_name:contact.trim(),objective};

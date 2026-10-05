@@ -7,7 +7,8 @@ const base={agent:{name:'Andreea',company:'Masscall',language:'Italian',voice:'m
 
 test('rehearsal uses the selected identity, person, plan, language and end condition',()=>{
  const request=normalizeRehearsalRequest({...base,start:true,messages:[]}),prompt=rehearsalInstructions(request);
- for(const phrase of ['Andreea','Ana Popescu','Qualify a new prospect','Italian','Asked for a call this week.','They agree to a follow-up or decline.','If They ask about pricing.: Explain the approved price','masscall.vercel.app','JSON'])assert.ok(prompt.includes(phrase),phrase);
+ for(const phrase of ['Andreea','Ana Popescu','Qualify a new prospect','Italian','Asked for a call this week.','They agree to a follow-up or decline.','If They ask about pricing.: Explain the approved price','Vico','JSON'])assert.ok(prompt.includes(phrase),phrase);
+ assert.doesNotMatch(prompt,/Masscall|masscall\.vercel\.app|Studio Chat/);
  assert.deepEqual(rehearsalInput(request),[{role:'user',content:'The outbound call has connected. Give the agent’s first spoken response now.'}]);
 });
 

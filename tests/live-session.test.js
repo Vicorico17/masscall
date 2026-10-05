@@ -31,7 +31,7 @@ test('opening instruction asks the live agent to speak immediately with natural 
  const prompt=openingInstructions({name:'Mihai',company:'Firma B',language:'Romanian',introduction:'Sunt {agent_name}, asistent AI la {company_name}.',opening:'Bună ziua, {first_name}!',closing:'La revedere!'},'Ioana Ionescu','Confirmă programarea');
  assert.match(prompt,/Begin now with one short, warm greeting/);
  assert.match(prompt,/do not make it a separate announcement/);
- assert.match(prompt,/Sunt Mihai, asistent AI la Firma B\./);
+ assert.match(prompt,/Sunt Mihai, agentul AI al lui Vico\./);
  assert.ok(prompt.includes('Bună ziua, Ioana!'));
  assert.ok(!prompt.includes('{first_name}'));
  assert.match(prompt,/pause and listen/);
@@ -42,8 +42,9 @@ test('live call language instruction covers the configured goodbye too',()=>{
  const session=buildLiveSessionConfig({language:'Italian',closing:'Goodbye for now!'});
  assert.match(session.instructions,/Speak only in Italian throughout the call/);
  assert.match(session.instructions,/friendly goodbye in Italian/);
- assert.match(session.instructions,/visit masscall\.vercel\.app to learn about Masscall voice AI agents/);
- assert.match(session.instructions,/For a caller-requested stop, skip promotion and end promptly/);
+ assert.match(session.instructions,/Andreea, Vico's AI agent/);
+ assert.doesNotMatch(session.instructions,/Masscall|Studio Chat|masscall\.vercel\.app/);
+ assert.match(session.instructions,/For a caller-requested stop, end promptly/);
  assert.match(openingInstructions({language:'Italian',opening:'Bună ziua!'}),/naturally convey this opening/);
 });
 
