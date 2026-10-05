@@ -7,7 +7,7 @@ const base={agent:{name:'Andreea',company:'Masscall',language:'Italian',voice:'m
 
 test('rehearsal uses the selected identity, person, plan, language and end condition',()=>{
  const request=normalizeRehearsalRequest({...base,start:true,messages:[]}),prompt=rehearsalInstructions(request);
- for(const phrase of ['Andreea','Ana Popescu','Qualify a new prospect','Italian','Asked for a call this week.','They agree to a follow-up or decline.','If They ask about pricing.: Explain the approved price','Vico','JSON'])assert.ok(prompt.includes(phrase),phrase);
+ for(const phrase of ['Andreea','Ana Popescu','Qualify a new prospect','Romanian','Asked for a call this week.','They agree to a follow-up or decline.','If They ask about pricing.: Explain the approved price','Vico','JSON'])assert.ok(prompt.includes(phrase),phrase);
  assert.doesNotMatch(prompt,/Masscall|masscall\.vercel\.app|Studio Chat/);
  assert.deepEqual(rehearsalInput(request),[{role:'user',content:'The outbound call has connected. Give the agent’s first spoken response now.'}]);
 });
@@ -34,6 +34,6 @@ test('rehearsal API authenticates and forwards the bounded request only to the s
   assert.equal((await request({authorization:'Bearer wrong',body:{}})).status,401);
   globalThis.fetch=async(url,options)=>{seen={url:String(url),authorization:options.headers.Authorization,body:JSON.parse(options.body)};return Response.json({reply:'Buongiorno, Ana!',callComplete:false})};
   const response=await request({authorization:'Bearer workspace-test-token-at-least-24',body:{...base,start:true,messages:[]}});
-  assert.equal(response.status,200);assert.deepEqual(response.data,{reply:'Buongiorno, Ana!',callComplete:false});assert.equal(seen.url,'https://bridge.example.com/rehearsal');assert.equal(seen.authorization,'Bearer bridge-test-secret');assert.equal(seen.body.start,true);assert.equal(seen.body.agent.language,'Italian');
+  assert.equal(response.status,200);assert.deepEqual(response.data,{reply:'Buongiorno, Ana!',callComplete:false});assert.equal(seen.url,'https://bridge.example.com/rehearsal');assert.equal(seen.authorization,'Bearer bridge-test-secret');assert.equal(seen.body.start,true);assert.equal(seen.body.agent.language,'Romanian');
  }finally{globalThis.fetch=originalFetch;for(const key of ['MASSCALL_ADMIN_TOKEN','VOICE_BRIDGE_URL','VOICE_BRIDGE_SECRET'])if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key]}
 });

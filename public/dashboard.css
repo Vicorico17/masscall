@@ -58,3 +58,14 @@ body.call-center .sidebar>:not(.brand){display:none}.number-label-editor{padding
 #real-call-card[data-call-mode="complex"] .call-mode-description[data-complex-description]{display:block}
 .call-starter-picker .inline-form{align-items:center}
 @media(max-width:620px){#real-call-card>.call-mode-switch{gap:5px}.call-mode-switch button{padding:10px}.call-mode-switch small{line-height:1.4}}
+.call-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px;margin:0 0 20px;border:1px solid #ebe7f3;border-radius:10px;background:#f7f6fa;max-width:650px}
+body[data-call-mode="simple"] .live-workspace-tabs button:not([data-panel="dashboard"]):not([data-panel="logs"]){display:none}
+body[data-call-mode="simple"] #real-call-card{max-width:760px;margin:auto}
+.quick-template-field,.quick-goal-field{padding:18px;border:1px solid #e8e1f4;background:#faf8ff;border-radius:10px}
+.quick-template-field label,.quick-goal-field label{font-size:13px;color:#4f3c78;font-weight:700}
+.quick-goal-field textarea{min-height:110px!important;font-size:13px;line-height:1.7}
+.test-call-status{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px;background:#f1f8f4;border:1px solid #d4e8dc;border-radius:10px;margin-bottom:22px;font-size:13px}
+.test-call-status p,.test-call-status small{font-size:11px;line-height:1.6}.test-call-status small{color:#71657d}
+[hidden]{display:none!important}
+button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:620px){.test-call-status{align-items:stretch;flex-direction:column}.test-call-status .actions{flex-wrap:wrap}.quick-template-field,.quick-goal-field{padding:13px}}

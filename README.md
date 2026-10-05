@@ -37,7 +37,7 @@ Live calls request Twilio dual-channel recording of both tracks. An opening anno
 
 The bridge verifies Twilio upgrade signatures and a short-lived HMAC-signed call context, negotiates raw G.711 μ-law with GPT-Live, paces output in 20 ms frames, and limits provider playback backlog with mark acknowledgments. Responses delegation includes a built-in `end_call` control: when the objective is complete or the caller asks to stop, the assistant gives a short goodbye and Masscall ends the Twilio call after its audio finishes. Web search is optional; business bookings and CRM writes are not connected. Real transcripts are not persisted, so audio recordings are the durable conversation artifact.
 
-The live call center includes **People** and **Call templates**. Save a person with a target group, company, role, and background; choose them before dialing to populate the contact details. Four ready-made call plans cover prospect introductions, appointment confirmations, customer follow-ups, and service feedback. Choose one to prefill the call, edit it, and save it as a reusable template. Saved templates can be associated with a target group, and selecting a matching person can load that group's template. The completion condition is passed into the live agent instructions and governs when it calls `end_call`; callers can still ask to stop at any time. People, groups, and templates are stored in this browser's local storage, so they are not shared across browsers or devices.
+The live call center includes **People** and **Call templates**. Save a person with a target group, company, role, and background; choose them before dialing to populate the contact details. Five Romanian call plans cover a quick conversation test, prospect introductions, appointment confirmations, customer follow-ups, and service feedback. Choose one to prefill the call, edit it, and save it as a reusable template. Saved templates can be associated with a target group. Selecting a person preserves the chosen call objective. The completion condition is passed into the live agent instructions and governs when it calls `end_call`; callers can still ask to stop at any time. People, groups, and templates are stored in this browser's local storage, so they are not shared across browsers or devices.
 
 ### Optional LiveKit comparison
 
@@ -103,7 +103,11 @@ Backend tests mock provider calls and verify authentication, purchase gating, de
 
 The app code retains a Romania number marketplace preview with fictional examples. It is not an active site destination; the dashboard now opens the authenticated Twilio call center directly.
 
-Use **🇷🇴 Română** in the header to translate the interface, including dialogs, call states, history, and setup help. Switch back with **EN · English**. The choice persists in browser storage; toggling preserves unsaved form data and does not translate user-entered instructions or change the agent's selected speaking language. New agents default to Romanian with Romanian instructions. Existing saved custom agents are preserved. New call timestamps use Europe/Bucharest. The recording announcement uses Twilio's ro-RO / Polly.Carmen voice when the agent speaks Romanian.
+Interfața, șabloanele, simulările și apelurile sunt în română. Agentul se prezintă ca agent AI al lui Vico, inclusiv pentru profilurile salvate anterior. Textele personalizate deja salvate de utilizator nu sunt traduse automat. Orele apelurilor folosesc Europe/Bucharest.
+
+Modul **Simplu** este implicit: alege șablonul, completează obiectivul, introdu numărul și pornește apelul de test. Șablonul **Test rapid de conversație** permite verificarea introducerii și a dialogului. Modul **Complex** oferă configurările detaliate existente. Obiectivul editat are prioritate față de șablon. Apelul afișează starea actualizată, poate fi închis din interfață și blochează pornirile repetate cât timp este activ.
+
+Puntea audio închide conexiunea dacă sesiunea vocală nu pornește sau nu produce primul răspuns audio în intervalul așteptat; detaliile apar în jurnalele serviciului. Pentru verificarea sunetului real, publică atât aplicația, cât și serviciul `bridge`, apoi efectuează un apel de test. Verificările automate ale interfeței folosesc răspunsuri simulate și nu efectuează apeluri reale.
 
 For a real Romanian test, the owner supplies:
 

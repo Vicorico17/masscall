@@ -1,122 +1,83 @@
-import { chromium } from '@playwright/test';
+import {chromium} from '@playwright/test';
 import assert from 'node:assert/strict';
-
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-const errors = [];
-page.on('pageerror', error => errors.push(error.message));
-
-try {
-  await page.goto('http://localhost:3000/');
-  await page.locator('#demo-form').waitFor();
-  assert.equal(await page.locator('a.nav-cta').getAttribute('href'), '/dashboard');
-
-  await page.goto('http://localhost:3000/dashboard#agent');
-  await page.getByLabel('Workspace access token').waitFor();
-  assert.equal(new URL(page.url()).hash, '');
-  assert.equal(await page.getByRole('heading', { name: 'Masscall call center' }).count(), 1);
-  assert.equal(await page.getByRole('button', { name: 'Close dialog' }).count(), 0);
-
-  await page.getByLabel('Workspace access token').fill('invalid-workspace-token-12345');
-  await page.getByRole('button', { name: 'Connect workspace' }).click();
-  await page.getByText('Workspace authentication required.').waitFor();
-
-  await page.goto('http://localhost:3000/studio');
-  assert.equal(new URL(page.url()).pathname, '/dashboard');
-  await page.getByLabel('Workspace access token').waitFor();
-
-  const numbers = [
-    { phone_number: '+14155550104', friendly_name: 'Main line' },
-    { phone_number: '+1 (415) 555-0104', friendly_name: 'Duplicate main line' }
-  ];
-  const calls=[];
-  await page.route('**/api/telephony?action=numbers', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ incoming_phone_numbers: numbers })
-  }));
-  await page.route('**/api/telephony?action=calls', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ calls })
-  }));
-  await page.route('**/api/telephony?action=call', async route => {
-    const body=route.request().postDataJSON();
-    calls.unshift({sid:`CA${'c'.repeat(32)}`,to:body.to,from:body.from,status:'completed',duration:31});
-    await route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({sid:calls[0].sid,status:'queued'})});
-  });
-  const rehearsals=[];
-  await page.route('**/api/rehearsal', async route => {
-    const body=route.request().postDataJSON();rehearsals.push(body);
-    const result=body.start?{reply:'Bună ziua, Ana! Aveți un moment?',callComplete:false}:{reply:'Mulțumesc pentru timpul acordat. O zi frumoasă!',callComplete:true};
-    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
-  });
-  await page.route('**/api/telephony?action=rename-number', async route => {
-    const body = route.request().postDataJSON();
-    assert.equal(body.friendlyName, 'Support line');
-    numbers[0].friendly_name = body.friendlyName;
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sid: numbers[0].sid, friendly_name: body.friendlyName }) });
-  });
-  numbers[0].sid = `PN${'a'.repeat(32)}`;
-  numbers[1].sid = `PN${'b'.repeat(32)}`;
-  await page.goto('http://localhost:3000/dashboard');
-  await page.getByLabel('Workspace access token').fill('valid-test-workspace-token-123');
-  await page.getByRole('button', { name: 'Connect workspace' }).click();
-  await page.getByRole('heading', { name: 'Your call center' }).waitFor();
-  assert.equal(await page.locator('#real-call-card').isVisible(), true);
-  assert.equal(await page.locator('#people-management').isVisible(), false);
-  await page.getByRole('button', { name: 'People', exact: true }).click();
-  assert.equal(await page.locator('#people-management').isVisible(), true);
-  assert.equal(await page.locator('#real-call-card').isVisible(), false);
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
-  assert.equal(await page.locator('#real-call-card').isVisible(), true);
-  assert.equal(await page.locator('#real-from option').count(), 2); // placeholder plus one unique number
-  await page.getByText('Rename this Twilio number').click();
-  await page.getByLabel('Twilio number name').fill('Support line');
-  await page.getByRole('button', { name: 'Save number name' }).click();
-  await page.locator('#real-from option').filter({ hasText: 'Support line' }).waitFor();
-  await page.getByRole('button', { name: 'Edit this number’s agent' }).click();
-  await page.getByRole('button', { name: 'Agent', exact: true }).waitFor();
-  assert.equal(await page.locator('#live-studio-slot').isVisible(), true);
-  assert.equal(await page.locator('#real-call-card').isVisible(), false);
-  await page.getByRole('button', { name: 'Back to dashboard' }).click();
-  assert.equal(await page.locator('.live-workspace-tabs button.active').innerText(), 'Dashboard');
-  await page.waitForFunction(() => {
-    const rect = document.querySelector('#real-call-card').getBoundingClientRect();
-    return rect.top < innerHeight && rect.bottom > 0;
-  });
-  await page.locator('#real-starter').selectOption('new-prospect');
-  assert.match(await page.locator('#real-objective').inputValue(), /understand whether the person has a relevant need/);
-  assert.match(await page.locator('#real-completion-trigger').inputValue(), /agrees to a next step/);
-  await page.getByRole('button', { name: 'Save this plan' }).click();
-  assert.equal(await page.locator('#template-name').inputValue(), 'Introduce your business to a prospect');
-  assert.match(await page.locator('#template-objective').inputValue(), /understand whether the person has a relevant need/);
-  await page.getByRole('button', { name: 'Rehearse this setup' }).click();
-  await page.getByText('Bună ziua, Ana! Aveți un moment?').waitFor();
-  await page.getByLabel('Your reply as the caller').fill('Yes, please tell me about your service.');
-  await page.getByRole('button', { name: 'Reply' }).click();
-  await page.getByText('Mulțumesc pentru timpul acordat. O zi frumoasă!').waitFor();
-  assert.equal(rehearsals.length,2);
-  assert.equal(rehearsals[0].callPlan.category,'Prospects');
-  assert.equal(rehearsals[0].callPlan.completionTrigger,'They agree to a next step, clearly decline, or ask to end the call.');
-  assert.equal(await page.getByText('The agent reached the configured end condition. No phone call was placed.').count(),1);
-  await page.getByLabel('Contact name').fill('Ana Popescu');
-  await page.getByLabel('Destination phone').fill('+40735577052');
-  await page.getByLabel('I have permission to call this person.').check();
-  await page.getByLabel(/required consent to record/).check();
-  await page.getByRole('button', {name:'Start call', exact:true}).click();
-  await page.getByRole('button', {name:'Review outcome'}).waitFor();
-  await page.getByRole('button', {name:'Review outcome'}).click();
-  await page.getByLabel('Call result').selectOption('follow_up');
-  await page.getByLabel('Agreed next step').fill('Send service details');
-  await page.getByRole('button', {name:'Save review'}).click();
-  await page.getByText('Follow-up agreed').waitFor();
-
-  await page.goto('http://localhost:3000/demo.html');
-  assert.equal(new URL(page.url()).pathname, '/');
-  await page.locator('#demo-form').waitFor();
-  assert.deepEqual(errors, []);
-  console.log('PASS: landing, authenticated dashboard navigation, unique numbers, templates, rehearsal, call review, and redirects');
-} finally {
-  await browser.close();
-}
+import {mkdir} from 'node:fs/promises';
+const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||undefined});
+const page=await browser.newPage({viewport:{width:1280,height:1000}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const sid='CA'+'c'.repeat(32),requests=[];let status='ringing',releaseCall;
+const numbers=[{sid:'PN'+'a'.repeat(32),phone_number:'+40210000104',friendly_name:'Vico'},{sid:'PN'+'b'.repeat(32),phone_number:'+40210000105',friendly_name:'Vico secundar'}];
+try{
+ await page.addInitScript(()=>{localStorage.setItem('masscall-v1',JSON.stringify({people:[{id:'ana',name:'Ana',phone:'+40735555123',category:'Existing customers'}],callTemplates:[{id:'saved-test',name:'Șablon salvat',objective:'Confirmă următorul pas.',opening:'Salută persoana.',talkingPoints:'Întreabă când poate discuta.',closing:'Mulțumește.',completionTrigger:'S-a stabilit următorul pas.',branches:[{when:'Persoana este ocupată',then:'Propune să revenim.'}]}]}))});
+ await page.route('**/api/**',async route=>{
+  const url=new URL(route.request().url()),action=url.searchParams.get('action');let data={};
+  if(action==='numbers'&&route.request().headers().authorization==='Bearer invalid-workspace-token-12345'){await route.fulfill({status:401,contentType:'application/json',body:JSON.stringify({error:'Workspace authentication required.'})});return}
+  if(action==='numbers')data={incoming_phone_numbers:numbers};
+  else if(action==='calls')data={calls:requests.length?[{sid,status,to:requests[0].to,from:numbers[0].phone_number,duration:'10'}]:[]};
+  else if(action==='engine-config')data={livekitEnabled:false};
+  else if(url.pathname==='/api/campaigns')data={campaigns:[]};
+  else if(action==='call'){requests.push(route.request().postDataJSON());await new Promise(resolve=>{releaseCall=resolve});data={sid,status:'queued'}}
+  else if(action==='call-status')data={sid,status,to:'+40735555123'};
+  else if(action==='hangup'){status='completed';data={sid,status}}
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('http://localhost:3000/dashboard');
+ await page.locator('#owner-token').fill('invalid-workspace-token-12345');
+ await page.locator('#owner-login button[type=submit]').click();
+ await page.getByText('Codul de acces este invalid.',{exact:true}).waitFor();
+ await page.locator('#owner-token').fill('test-workspace-token-123456789');
+ await page.locator('#owner-login button[type=submit]').click();
+ await page.locator('#call-template').waitFor();
+ assert.equal(await page.locator('html').getAttribute('lang'),'ro');
+ assert.equal(await page.locator('#real-call').getAttribute('data-mode'),'simple');
+ assert.equal(await page.locator('#real-engine').isVisible(),false);
+ assert.equal(await page.locator('#real-template').isVisible(),false);
+ assert.equal(await page.locator('#real-starter').isVisible(),false);
+ assert.equal(await page.locator('#call-template').inputValue(),'starter:test-conversation');
+ await page.locator('#call-template').selectOption('saved:saved-test');
+ assert.equal(await page.locator('#real-objective').inputValue(),'Confirmă următorul pas.');
+ await page.locator('#call-template').selectOption('starter:appointment-confirmation');
+ assert.match(await page.locator('#real-objective').inputValue(),/programarea/);
+ const goal='Confirmă programarea de mâine la ora 10:00, la recepție.';
+ await page.locator('#real-objective').fill(goal);
+ await page.locator('#real-person').selectOption('ana');
+ assert.equal(await page.locator('#real-objective').inputValue(),goal);
+ assert.equal(await page.locator('#call-template').inputValue(),'starter:appointment-confirmation');
+ await page.locator('#real-from').selectOption(numbers[1].phone_number);
+ assert.equal(await page.locator('#real-objective').inputValue(),goal);
+ assert.equal(await page.locator('#live-studio-slot').isVisible(),false);
+ await page.locator('button[data-call-mode=complex]').click();
+ assert.equal(await page.locator('#real-engine').isVisible(),true);
+ await page.locator('button[data-call-mode=simple]').click();
+ assert.equal(await page.locator('#real-objective').inputValue(),goal);
+ await page.locator('#real-contact').fill('Ana');
+ await page.locator('#real-to').fill('+40 (735) 555-123');
+ await page.locator('#real-call [name=consent]').check();
+ await page.locator('#real-call [name=recordingConsent]').check();
+ await page.locator('#real-objective').fill('');
+ await page.locator('#real-call button[type=submit]').click();
+ assert.equal(requests.length,0);
+ await page.locator('#real-objective').fill(goal);
+ await page.locator('#real-call button[type=submit]').click();
+ await page.waitForFunction(()=>document.querySelector('#real-call button[type=submit]').disabled);
+ await page.locator('#real-call').evaluate(form=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+ await page.waitForTimeout(100);
+ assert.equal(requests.length,1);
+ releaseCall();
+ await page.getByText('Telefonul sună',{exact:true}).waitFor();
+ assert.equal(requests[0].objective,goal);assert.equal(requests[0].to,'+40735555123');assert.equal(requests[0].agent.language,'Romanian');assert.equal(requests[0].callPlan.templateName,'Confirmare de programare');
+ assert.equal(await page.locator('#real-call button[type=submit]').isDisabled(),true);
+ status='in-progress';
+ await page.getByText('Apel conectat',{exact:true}).waitFor();
+ await page.locator('#end-test-call').click();
+ await page.getByText('Apel încheiat',{exact:true}).waitFor();
+ assert.equal(await page.locator('#real-call button[type=submit]').isDisabled(),false);
+ await mkdir('output/playwright',{recursive:true});
+ await page.screenshot({path:'output/playwright/call-flow-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:'output/playwright/call-flow-mobile.png',fullPage:true});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No horizontal overflow on mobile');
+ assert.deepEqual(errors,[]);
+ console.log('PASS: Romanian UI, template selection, edited goal retained, mode switching, normalized number, one request per call, status polling, hangup, mobile layout.');
+ await page.goto('http://localhost:3000/studio');assert.equal(new URL(page.url()).pathname,'/dashboard');await page.locator('#owner-token').waitFor();
+ await page.goto('http://localhost:3000/demo.html');assert.equal(new URL(page.url()).pathname,'/');await page.locator('#demo-form').waitFor();
+}finally{await browser.close()}

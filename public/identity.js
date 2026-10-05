@@ -25,7 +25,8 @@ export const supportedLanguages = [
 ];
 export function languageDetails(value='Romanian') { return supportedLanguages.find(language=>language.name.toLowerCase()===String(value).trim().toLowerCase())||supportedLanguages[1]; }
 export function languagePolicy(value='Romanian') { const language=languageDetails(value);return `Speak only in ${language.name} throughout the call. Keep every greeting, response, and closing in ${language.name}. If saved examples or instructions use another language, convey their meaning in ${language.name} instead of repeating their original wording. Do not switch languages, even if the caller does.`; }
-export function languageOptions(value='Romanian',id='language') { const language=languageDetails(value);return `<select id="${id}" name="language" class="language-select">${supportedLanguages.map(option=>`<option value="${option.name}" ${option.name===language.name?'selected':''}>${option.flag} ${option.native} · ${option.region}</option>`).join('')}</select><small class="language-promise" id="${id}-policy" aria-live="polite">${language.flag} Call prompt: Speak only in ${language.name} throughout the call.</small>`; }
+export function languageOptions(value='Romanian',id='language') {return `<select id="${id}" name="language" class="language-select"><option value="Romanian">🇷🇴 Română</option></select><small class="language-promise" id="${id}-policy">Agentul vorbește în română pe tot parcursul apelului.</small>`;}
+
 export const numberKey = number => '+' + String(number || '').replace(/\D/g, '');
 export function dedupePhoneNumbers(numbers = []) {
   const unique = new Map();

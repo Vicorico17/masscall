@@ -14,3 +14,10 @@ test('recorded call validates caller ownership and sends call context straight t
 test('malformed recording IDs cannot become provider URLs',async()=>{env();const r=await request('audio&recording=..%2Fsecret',{method:'GET'});assert.equal(r.status,400)});
 test('upstream errors propagate without fake success',async()=>{env();globalThis.fetch=async()=>Response.json({message:'Invalid credentials'},{status:401});try{const r=await request('numbers',{method:'GET'});assert.equal(r.status,401);assert.equal(r.data.error,'Invalid credentials')}finally{globalThis.fetch=originalFetch}});
 test('number search defaults to Romanian voice inventory',async()=>{env();let requested;globalThis.fetch=async url=>{requested=String(url);return Response.json({available_phone_numbers:[]})};try{const r=await request('search',{method:'GET'});assert.equal(r.status,200);assert.match(requested,/AvailablePhoneNumbers\/RO\/Local\.json\?VoiceEnabled=true/)}finally{globalThis.fetch=originalFetch}});
+test('individual call status requires authentication and a valid SID',async()=>{
+ env();assert.equal((await request('call-status&call=invalid',{method:'GET'})).status,400);
+ assert.equal((await request('call-status&call=CA'+'1'.repeat(32),{method:'GET',auth:false})).status,401);
+ const sid='CA'+'1'.repeat(32);let called;
+ globalThis.fetch=async url=>{called=String(url);return Response.json({sid,status:'in-progress',to:'+40735555123',duration:'12',private_field:'hidden'})};
+ try{const result=await request('call-status&call='+sid,{method:'GET'});assert.equal(result.status,200);assert.equal(result.data.status,'in-progress');assert.equal('private_field' in result.data,false);assert.ok(called.endsWith('Calls/'+sid+'.json'))}finally{globalThis.fetch=originalFetch}
+});

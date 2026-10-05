@@ -14,6 +14,10 @@ export default async function handler(req,res){
  if(!/^[A-Z]{2}$/.test(country)||!/^\d{0,6}$/.test(digits))return json(res,400,{error:'Invalid country or number filter.'});
  return json(res,200,await twilio(`AvailablePhoneNumbers/${country}/Local.json?VoiceEnabled=true&PageSize=12${digits?'&Contains='+digits:''}`));
  }
+ if(req.method==='GET'&&action==='call-status'){
+ const sid=url.searchParams.get('call');if(!/^CA[0-9a-f]{32}$/i.test(sid||''))return json(res,400,{error:'Identificatorul apelului este invalid.'});
+ const call=await twilio(`Calls/${sid}.json`);return json(res,200,{sid:call.sid,status:call.status,to:call.to,duration:call.duration||'0'});
+ }
  if(req.method==='GET'&&action==='calls')return json(res,200,await twilio('Calls.json?PageSize=50'));
  if(req.method==='GET'&&action==='recordings'){
  const call=url.searchParams.get('call');if(!/^CA[0-9a-f]{32}$/i.test(call||''))return json(res,400,{error:'Invalid call ID.'});

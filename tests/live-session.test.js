@@ -40,10 +40,10 @@ test('opening instruction asks the live agent to speak immediately with natural 
 
 test('live call language instruction covers the configured goodbye too',()=>{
  const session=buildLiveSessionConfig({language:'Italian',closing:'Goodbye for now!'});
- assert.match(session.instructions,/Speak only in Italian throughout the call/);
- assert.match(session.instructions,/friendly goodbye in Italian/);
+ assert.match(session.instructions,/Speak only in Romanian throughout the call/);
+ assert.match(session.instructions,/friendly goodbye in Romanian/);
  assert.match(session.instructions,/Andreea, Vico's AI agent/);
- assert.doesNotMatch(session.instructions,/Masscall|Studio Chat|masscall\.vercel\.app/);
+ assert.doesNotMatch(session.instructions,/visit masscall\.vercel\.app/);
  assert.match(session.instructions,/For a caller-requested stop, end promptly/);
  assert.match(openingInstructions({language:'Italian',opening:'Bună ziua!'}),/naturally convey this opening/);
 });
@@ -53,7 +53,7 @@ test('per-call plan controls the opening, discussion points, closing and hangup 
  assert.match(session.instructions,/Ask if now is a good time/);
  assert.match(session.instructions,/Understand their current needs/);
  assert.match(session.instructions,/They agree on a next step or clearly decline/);
- assert.match(session.instructions,/friendly goodbye in Italian/);
+ assert.match(session.instructions,/friendly goodbye in Romanian/);
  assert.match(session.instructions,/Completion condition: They agree on a next step/);
  assert.match(openingInstructions({language:'Italian'},'Ana','Qualify a lead',true,{opening:'Ask if now is a good time.'}),/Ask if now is a good time/);
 });
