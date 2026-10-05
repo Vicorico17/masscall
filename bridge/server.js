@@ -98,7 +98,7 @@ sockets.on('connection',phone=>{
  started=true;
  log('bridge.live_session_started',{sessionId:e.session?.id});
  const greeting=openingInstructions(data.agent,data.contact,data.objective,data.recording!==false,data.callPlan);
- sendLive({type:'session.instructions.append',client_event_id:'masscall-opening',delegation_id:null,content:greeting});
+ sendLive({type:'session.instructions.append',event_id:'masscall-opening',delegation_id:null,content:greeting});
  for(const audio of inputQueue){sendLive({type:'session.input_audio.append',audio});if(!sentInput){sentInput=true;log('bridge.first_input_audio_sent',{queued:true})}}inputQueue=[];
  }
  if(e.type==='session.instructions.appended'&&e.client_event_id==='masscall-opening')log('bridge.opening_instructions_accepted',{callSid});
