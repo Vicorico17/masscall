@@ -83,4 +83,7 @@ try{
  console.log('PASS: Romanian UI, CALL and MAX SETTINGS, template selection, call overrides, status polling, hangup, mobile layout.');
  await page.goto('http://localhost:3000/studio');assert.equal(new URL(page.url()).pathname,'/dashboard');await page.locator('#owner-token').waitFor();
  await page.goto('http://localhost:3000/demo.html');assert.equal(new URL(page.url()).pathname,'/');await page.locator('#demo-form').waitFor();
+ assert.equal(await page.getByRole('heading',{name:'Apeluri AI, în română.'}).count(),1);
+ assert.ok(await page.locator('.hero-art img').evaluate(image=>image.complete&&image.naturalWidth>0),'Brand mascot loads');
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Landing page fits mobile viewport');
 }finally{await browser.close()}

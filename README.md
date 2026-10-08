@@ -1,5 +1,9 @@
 # Masscall
 
+## Brand direction
+
+The public test-call page and owner dashboard follow `Masscall-Brand-Book.pdf` (October 2026): Void `#0B0711`, Signal Violet `#8B36E8`, Lavender `#DCC8F1`, Acid `#D7FF3F`, and Chalk `#F5F0E8`. The headset worm in `public/brand/masscall-worm.webp` is cropped from the supplied brand-book illustration. Use it at hero size; the text wordmark remains legible at small sizes. DejaVu Sans is preferred with a system sans fallback. The book describes a proposed identity, so final vector marks and commercial rights review are still separate production work.
+
 A Romanian-first AI calling product with a free example call, a paid agent Studio, and an operator pilot workspace.
 
 ## Run
