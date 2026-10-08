@@ -3,6 +3,14 @@ import {authorize,twilio,readBody,json} from '../lib/telephony.js';
 import {buildCallTwiml} from '../lib/call-context.js';
 import {normalizeCallPlan} from '../lib/call-plan.js';
 import {createLiveKitTwilioCall,liveKitCallConfigured} from '../lib/livekit-telephony.js';
+async function requireReadyBridge(bridge){
+ const health=new URL('/health',bridge.replace(/^wss:/,'https:'));
+ try{
+  const response=await fetch(health,{signal:AbortSignal.timeout(18000),cache:'no-store'});
+  if(response.ok&&(await response.json()).status==='ok')return;
+ }catch{}
+ throw Object.assign(new Error('The voice service is unavailable or still starting. No call was placed. Please try again in a minute.'),{status:503});
+}
 export default async function handler(req,res){
  if(!authorize(req))return json(res,401,{error:'Workspace authentication required.'});
  try{
@@ -67,6 +75,7 @@ export default async function handler(req,res){
  const agent=normalizeIdentity(body.agent);
  const contact=String(body.contact||'').trim().slice(0,80);
  const callPlan=normalizeCallPlan(body.callPlan);
+ if(engine==='bridge')await requireReadyBridge(bridge);
  const call=engine==='livekit'
   ?await createLiveKitTwilioCall({to:body.to,from:body.from,agent,contact,objective,callPlan})
   :await twilio('Calls.json','POST',{To:body.to,From:body.from,Twiml:buildCallTwiml({bridge,secret:bridgeSecret,agent,contact,objective,callPlan,recording:true}),Record:'true',RecordingChannels:'dual',RecordingTrack:'both',TimeLimit:'300',Timeout:'25'});
@@ -77,5 +86,5 @@ export default async function handler(req,res){
  return json(res,200,await twilio(`Calls/${body.call}.json`,'POST',{Status:'completed'}));
  }
  return json(res,404,{error:'Unknown action.'});
- }catch(error){return json(res,error.status>=400&&error.status<500?error.status:502,{error:error.message||'Provider request failed.'})}
+ }catch(error){return json(res,error.status>=400&&error.status<600?error.status:502,{error:error.message||'Provider request failed.'})}
 }
