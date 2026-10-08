@@ -27,6 +27,9 @@ try{
  await page.locator('#owner-token').fill('test-workspace-token-123456789');
  await page.locator('#owner-login button[type=submit]').click();
  await page.locator('#call-template').waitFor();
+ const brandBox=await page.locator('.sidebar .brand').boundingBox(),menuBox=await page.locator('.live-workspace-menu').boundingBox();
+ assert.ok(menuBox.x<brandBox.x+240&&menuBox.y>brandBox.y,'Call menu sits below the Masscall brand in the left sidebar');
+ assert.ok(await page.locator('.brand-emblem img').evaluate(image=>image.complete&&image.naturalWidth>0),'Sidebar mascot loads');
  assert.equal(await page.locator('.live-workspace-menu button').first().innerText(),'CALL');
  assert.equal(await page.locator('html').getAttribute('lang'),'ro');
  assert.equal(await page.locator('#real-call').getAttribute('data-mode'),'simple');
@@ -79,6 +82,14 @@ try{
  await page.setViewportSize({width:390,height:844});
  await page.screenshot({path:'output/playwright/call-flow-mobile.png',fullPage:true});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No horizontal overflow on mobile');
+ await page.locator('#mobile-menu-toggle').click();
+ assert.equal(await page.locator('#mobile-menu-toggle').getAttribute('aria-expanded'),'true');
+ const mobileMenuBox=await page.locator('.live-workspace-menu').boundingBox();
+ assert.ok(mobileMenuBox&&mobileMenuBox.x>=0&&mobileMenuBox.x+mobileMenuBox.width<=390,'Mobile menu is fully visible');
+ await page.screenshot({path:'output/playwright/call-menu-mobile.png'});
+ await page.locator('.live-workspace-menu [data-panel=max]').click();
+ assert.equal(await page.locator('#mobile-menu-toggle').getAttribute('aria-expanded'),'false');
+ assert.equal(await page.locator('#call-setup-title').innerText(),'MAX SETTINGS');
  assert.deepEqual(errors,[]);
  console.log('PASS: Romanian UI, CALL and MAX SETTINGS, template selection, call overrides, status polling, hangup, mobile layout.');
  await page.goto('http://localhost:3000/studio');assert.equal(new URL(page.url()).pathname,'/dashboard');await page.locator('#owner-token').waitFor();
