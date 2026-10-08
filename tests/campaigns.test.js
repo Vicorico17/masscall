@@ -12,10 +12,10 @@ function request(action,{auth=true,method='GET',body={}}={}){const req={url:'/ap
 const person=(overrides={})=>({id:'p1',name:'Ana Popescu',phone:'+40712345678',category:'Prospects',company:'Atelier',role:'Owner',notes:'Interested in automation.',callConsent:true,recordingConsent:true,...overrides});
 const campaign=(overrides={})=>({name:'Prospect follow-up',group:'Prospects',from:'+40700000001',runAt:new Date(Date.now()+60*60*1000).toISOString(),recipients:[person()],agent:{name:'Andreea',company:'Masscall',language:'Romanian',goal:'Book a demo',introduction:'Hello'},objective:'Ask whether they want a demo.',callPlan:{category:'Prospects',templateName:'Intro',opening:'Say hello',talkingPoints:'Ask about needs',closing:'Thank them',completionTrigger:'They agree or decline'},...overrides});
 test('scheduled campaign validates future time, unique contacts and both contact consents',()=>{
- const now=new Date('2026-09-30T10:00:00.000Z');assert.equal(normalizeCampaign(campaign(),now).recipients.length,1);
+ const now=new Date();assert.equal(normalizeCampaign(campaign(),now).recipients.length,1);
  assert.throws(()=>normalizeCampaign(campaign({recipients:[person({callConsent:false})]}),now),/consent/);
  assert.throws(()=>normalizeCampaign(campaign({recipients:[person(),person({id:'p2',name:'Different name'})]}),now),/more than once/);
- assert.throws(()=>normalizeCampaign(campaign({runAt:'2026-09-30T10:00:30.000Z'}),now),/one minute/);
+ assert.throws(()=>normalizeCampaign(campaign({runAt:new Date(now.getTime()+30_000).toISOString()}),now),/one minute/);
  assert.throws(()=>normalizeCampaign(campaign({recipients:Array.from({length:21},(_,i)=>person({id:'p'+i,phone:'+40712345'+String(i).padStart(3,'0')}))}),now),/between 1 and 20/);
 });
 test('campaign worker only starts weekday calls from 09:00 to 17:55 Romania time',()=>{

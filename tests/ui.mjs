@@ -27,6 +27,7 @@ try{
  await page.locator('#owner-token').fill('test-workspace-token-123456789');
  await page.locator('#owner-login button[type=submit]').click();
  await page.locator('#call-template').waitFor();
+ assert.equal(await page.locator('.live-workspace-menu button').first().innerText(),'CALL');
  assert.equal(await page.locator('html').getAttribute('lang'),'ro');
  assert.equal(await page.locator('#real-call').getAttribute('data-mode'),'simple');
  assert.equal(await page.locator('#real-engine').isVisible(),false);
@@ -45,9 +46,11 @@ try{
  await page.locator('#real-from').selectOption(numbers[1].phone_number);
  assert.equal(await page.locator('#real-objective').inputValue(),goal);
  assert.equal(await page.locator('#live-studio-slot').isVisible(),false);
- await page.locator('button[data-call-mode=complex]').click();
+ await page.locator('.live-workspace-menu [data-panel=max]').click();
+ assert.equal(await page.locator('#call-setup-title').innerText(),'MAX SETTINGS');
  assert.equal(await page.locator('#real-engine').isVisible(),true);
- await page.locator('button[data-call-mode=simple]').click();
+ await page.locator('#call-voice').selectOption('gleam');
+ await page.locator('.live-workspace-menu [data-panel=call]').click();
  assert.equal(await page.locator('#real-objective').inputValue(),goal);
  await page.locator('#real-contact').fill('Ana');
  await page.locator('#real-to').fill('+40 (735) 555-123');
@@ -64,7 +67,7 @@ try{
  assert.equal(requests.length,1);
  releaseCall();
  await page.getByText('Telefonul sună',{exact:true}).waitFor();
- assert.equal(requests[0].objective,goal);assert.equal(requests[0].to,'+40735555123');assert.equal(requests[0].agent.language,'Romanian');assert.equal(requests[0].callPlan.templateName,'Confirmare de programare');
+ assert.equal(requests[0].objective,goal);assert.equal(requests[0].to,'+40735555123');assert.equal(requests[0].agent.language,'Romanian');assert.equal(requests[0].agent.voice,'gleam');assert.equal(requests[0].callPlan.templateName,'Confirmare de programare');
  assert.equal(await page.locator('#real-call button[type=submit]').isDisabled(),true);
  status='in-progress';
  await page.getByText('Apel conectat',{exact:true}).waitFor();
@@ -77,7 +80,7 @@ try{
  await page.screenshot({path:'output/playwright/call-flow-mobile.png',fullPage:true});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No horizontal overflow on mobile');
  assert.deepEqual(errors,[]);
- console.log('PASS: Romanian UI, template selection, edited goal retained, mode switching, normalized number, one request per call, status polling, hangup, mobile layout.');
+ console.log('PASS: Romanian UI, CALL and MAX SETTINGS, template selection, call overrides, status polling, hangup, mobile layout.');
  await page.goto('http://localhost:3000/studio');assert.equal(new URL(page.url()).pathname,'/dashboard');await page.locator('#owner-token').waitFor();
  await page.goto('http://localhost:3000/demo.html');assert.equal(new URL(page.url()).pathname,'/');await page.locator('#demo-form').waitFor();
 }finally{await browser.close()}
