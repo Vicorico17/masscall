@@ -35,5 +35,5 @@ export default async function handler(req,res){
    return json(res,201,{status:call.status,token});
   }
   return json(res,404,{error:'Unknown action.'});
- }catch(error){return json(res,error.status>=400&&error.status<500?error.status:502,{error:error.status>=500?'Serviciul de apeluri nu este disponibil momentan.':error.message||'Cererea nu a reușit.'})}
+ }catch(error){return json(res,error.status>=400&&error.status<600?error.status:502,{error:error.code==='VOICE_BRIDGE_UNAVAILABLE'?'Asistentul vocal nu este disponibil momentan. Nu am inițiat apelul; încearcă din nou într-un minut.':error.status>=500?'Serviciul de apeluri nu este disponibil momentan.':error.message||'Cererea nu a reușit.'})}
 }

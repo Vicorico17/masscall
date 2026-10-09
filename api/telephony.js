@@ -1,16 +1,8 @@
 import { normalizeIdentity } from '../public/identity.js';
-import {authorize,twilio,readBody,json} from '../lib/telephony.js';
+import {authorize,twilio,readBody,json,requireReadyBridge} from '../lib/telephony.js';
 import {buildCallTwiml} from '../lib/call-context.js';
 import {normalizeCallPlan} from '../lib/call-plan.js';
 import {createLiveKitTwilioCall,liveKitCallConfigured} from '../lib/livekit-telephony.js';
-async function requireReadyBridge(bridge){
- const health=new URL('/health',bridge.replace(/^wss:/,'https:'));
- try{
-  const response=await fetch(health,{signal:AbortSignal.timeout(18000),cache:'no-store'});
-  if(response.ok&&(await response.json()).status==='ok')return;
- }catch{}
- throw Object.assign(new Error('The voice service is unavailable or still starting. No call was placed. Please try again in a minute.'),{status:503});
-}
 export default async function handler(req,res){
  if(!authorize(req))return json(res,401,{error:'Workspace authentication required.'});
  try{

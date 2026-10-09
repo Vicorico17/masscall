@@ -76,3 +76,20 @@ test('a campaign waits for any active campaign call from the same Twilio number'
   assert.equal(result.status,'scheduled');assert.equal(twilioPosts,0);
  }finally{globalThis.fetch=originalFetch}
 });
+test('a campaign retries the same contact when the voice bridge is unavailable',async()=>{
+ env();const store=new Map(),base=new Date('2026-09-30T07:00:00.000Z');let twilioPosts=0;
+ globalThis.fetch=async(url,options={})=>{
+  const target=String(url);
+  if(target==='https://bridge.example.com/health')return Response.json({status:'starting'},{status:503});
+  if(target.startsWith('https://qstash.example.com/'))return Response.json({messageId:'msg_'+Math.random()});
+  if(target.startsWith('https://redis.example.com/')){const c=JSON.parse(options.body),op=String(c[0]).toUpperCase(),key=String(c[1]);if(op==='GET')return Response.json({result:store.get(key)||null});if(op==='SET'){if(c.includes('NX')&&store.has(key))return Response.json({result:null});store.set(key,String(c[2]));return Response.json({result:'OK'})}if(op==='SADD'||op==='EVAL')return Response.json({result:1});throw new Error('Unexpected Redis op '+op)}
+  if(target.includes('/Calls.json')){twilioPosts++;return Response.json({sid:'CA'+'8'.repeat(32),status:'queued'})}
+  throw new Error('Unexpected URL '+target);
+ };
+ try{
+  const item=await createCampaign(campaign({runAt:new Date(base.getTime()+60_000).toISOString()}),base);
+  const result=await runCampaignJob(item.id,item.dispatchToken,new Date(base.getTime()+2*60_000));
+  const saved=JSON.parse(store.get('campaign:'+hash(item.id)));
+  assert.equal(result.status,'rescheduled');assert.equal(saved.cursor,0);assert.equal(saved.recipients[0].status,'queued');assert.equal(twilioPosts,0);
+ }finally{globalThis.fetch=originalFetch}
+});

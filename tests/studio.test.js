@@ -12,13 +12,14 @@ test('paid Romanian agent can save a voice and place a recorded call to the veri
   const target=String(url);
   if(target.includes('redis.example.com')){const command=JSON.parse(options.body);if(command[0]==='GET'){if(String(command[1]).startsWith('studio:session:'))return Response.json({result:'+40712345678'});if(String(command[1]).startsWith('studio:account:'))return Response.json({result:savedAccount||JSON.stringify({agent:{name:'Andreea',company:'Studio',goal:'Confirmă o programare',introduction:'Sunt asistent AI',voice:'marin',language:'Romanian'},subscription:'sub_test',customer:'cus_test'})})}if(command[0]==='SET'&&String(command[1]).startsWith('studio:account:'))savedAccount=command[2];return Response.json({result:command[0]==='EVAL'?1:'OK'})}
   if(target.includes('api.stripe.com/v1/subscriptions/sub_test'))return Response.json({status:'active'});
+  if(target==='https://bridge.example.com/health')return Response.json({status:'ok'});
   if(target.includes('/Calls.json')){created=new URLSearchParams(options.body);return Response.json({sid:'CA'+'3'.repeat(32),status:'queued'})}
   throw new Error('Unexpected request '+target);
  };
  try{
   const agent={name:'Elena',company:'Atelier',goal:'Confirmă programarea',introduction:'Sunt {agent_name}, asistent AI al {company_name}.',voice:'cedar',language:'Romanian'};
   let r=await request('agent',{agent},cookie);assert.equal(r.status,200);assert.equal(r.data.agent.voice,'cedar');assert.ok(savedAccount);
-  r=await request('test-call',{consent:true,recordingConsent:true},cookie);assert.equal(r.status,201);assert.equal(created.get('To'),'+40712345678');assert.equal(created.get('Record'),'true');assert.equal(created.get('RecordingChannels'),'dual');assert.doesNotMatch(created.get('Twiml'),/<Say\b/);assert.match(created.get('Twiml'),/<Connect><Stream/);assert.equal(JSON.parse(Buffer.from([...created.get('Twiml').matchAll(/name="context\d+" value="([^"]+)"/g)].map(match=>match[1]).join(''),'base64url').toString()).recording,true);
+  r=await request('test-call',{consent:true,recordingConsent:true},cookie);assert.equal(r.status,201);assert.equal(created.get('To'),'+40712345678');assert.equal(created.get('Record'),'true');assert.equal(created.get('RecordingChannels'),'dual');assert.match(created.get('Twiml'),/<\/Connect><Say\b/);assert.match(created.get('Twiml'),/<Connect><Stream/);assert.equal(JSON.parse(Buffer.from([...created.get('Twiml').matchAll(/name="context\d+" value="([^"]+)"/g)].map(match=>match[1]).join(''),'base64url').toString()).recording,true);
  }finally{globalThis.fetch=originalFetch}
 });
 test('customer calls obey Romanian business hours',()=>{
@@ -36,13 +37,14 @@ test('paid contact call uses assigned number, goal, recording and Romanian mobil
  globalThis.fetch=async(url,options={})=>{
   const target=String(url);
   if(target.includes('redis.example.com')){const command=JSON.parse(options.body);return Response.json({result:command[0]==='EVAL'?1:'OK'})}
+  if(target==='https://bridge.example.com/health')return Response.json({status:'ok'});
   if(target.includes('/Calls.json')){created=new URLSearchParams(options.body);return Response.json({sid:'CA'+'4'.repeat(32),status:'queued'})}
   throw new Error('Unexpected request '+target);
  };
  try{
   const data={number:'+40210000123',agent:{name:'Elena',company:'Atelier',goal:'Confirmă o programare',introduction:'Sunt asistentul AI.',language:'Romanian',voice:'cedar'}};
   const call=await premiumContactCall('+40712345678',data,{to:'+40722222222',contact:'Ana Popescu',consent:true,recordingConsent:true},new Date('2026-09-23T10:00:00Z'));
-  assert.match(call.sid,/^CA/);assert.equal(created.get('To'),'+40722222222');assert.equal(created.get('From'),'+40210000123');assert.equal(created.get('Record'),'true');assert.equal(created.get('RecordingChannels'),'dual');assert.doesNotMatch(created.get('Twiml'),/<Say\b/);assert.match(created.get('Twiml'),/<Connect><Stream/);assert.equal(JSON.parse(Buffer.from([...created.get('Twiml').matchAll(/name="context\d+" value="([^"]+)"/g)].map(match=>match[1]).join(''),'base64url').toString()).recording,true);
+  assert.match(call.sid,/^CA/);assert.equal(created.get('To'),'+40722222222');assert.equal(created.get('From'),'+40210000123');assert.equal(created.get('Record'),'true');assert.equal(created.get('RecordingChannels'),'dual');assert.match(created.get('Twiml'),/<\/Connect><Say\b/);assert.match(created.get('Twiml'),/<Connect><Stream/);assert.equal(JSON.parse(Buffer.from([...created.get('Twiml').matchAll(/name="context\d+" value="([^"]+)"/g)].map(match=>match[1]).join(''),'base64url').toString()).recording,true);
  }finally{globalThis.fetch=originalFetch}
 });
 test('opted-out contacts cannot be called again',async()=>{
