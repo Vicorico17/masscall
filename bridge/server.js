@@ -6,6 +6,7 @@ import WebSocket,{WebSocketServer} from 'ws';
 import {equal,twilio} from '../lib/telephony.js';
 import {verifyStreamSignature} from '../lib/twilio-stream-signature.js';
 import {normalizeRehearsalRequest,rehearsalInstructions,rehearsalInput} from '../lib/rehearsal.js';
+import {VoicePlayback,shouldClearForTranscript} from '../lib/voice-playback.js';
 const required=['OPENAI_API_KEY','VOICE_BRIDGE_SECRET','VOICE_BRIDGE_URL','TWILIO_AUTH_TOKEN','TWILIO_ACCOUNT_SID'];
 const missing=required.filter(key=>!process.env[key]?.trim());
 if(missing.length)throw new Error(`Missing bridge environment variables: ${missing.join(', ')}`);
@@ -64,16 +65,16 @@ server.on('upgrade',(req,socket,head)=>{
 const used=new Map();
 const voices=new Set(['marin','cedar','quartz','ripple','vesper','willow','stone','gleam']);
 sockets.on('connection',phone=>{
- let live,started=false,streamSid,callSid,stopping=false,closeTimeout,paceTimer,pendingOutput=Buffer.alloc(0),inputQueue=[],markIndex=0,receivedMedia=false,sentInput=false,receivedOutput=false,endCallRequested=false,closingAudioStarted=false,endFallbackTimer,finishHangupTimer,sessionReadyTimer,firstOutputTimer,openingAccepted=false;const marks=new Set();
+ let live,started=false,streamSid,callSid,stopping=false,closeTimeout,paceTimer,playback,inputQueue=[],receivedMedia=false,sentInput=false,receivedOutput=false,endCallRequested=false,closingAudioStarted=false,endFallbackTimer,finishHangupTimer,sessionReadyTimer,firstOutputTimer,openingAccepted=false,streamStartedAt,sessionStartedAt,firstInputAt,firstOutputAt,firstPlayedAt,lastClearAt=0,lastCallerTranscriptEndMs=-1,pendingCallerEndMs=-1;const responseGaps=[];let inputTranscriptDeltas=0,outputTranscriptDeltas=0,interruptions=0;
  log('bridge.twilio_connected');
  const sendPhone=e=>{if(phone.readyState===WebSocket.OPEN)phone.send(JSON.stringify(e))};
  const sendLive=e=>{if(live?.readyState===WebSocket.OPEN)live.send(JSON.stringify(e))};
  const startupTimeout=setTimeout(()=>phone.close(1008,'No valid start received'),10000);
  const stop=()=>{if(stopping)return;stopping=true;clearTimeout(startupTimeout);clearTimeout(sessionReadyTimer);clearTimeout(firstOutputTimer);clearTimeout(endFallbackTimer);clearTimeout(finishHangupTimer);clearInterval(paceTimer);if(started){sendLive({type:'session.close'});closeTimeout=setTimeout(()=>live?.terminate(),15000)}else live?.terminate()};
  const endTwilioCall=async reason=>{if(stopping)return;stopping=true;clearTimeout(startupTimeout);clearTimeout(sessionReadyTimer);clearTimeout(firstOutputTimer);clearTimeout(endFallbackTimer);clearTimeout(finishHangupTimer);clearInterval(paceTimer);try{if(!/^CA[\da-f]{32}$/i.test(callSid||''))throw new Error('Invalid Twilio call SID');await twilio(`Calls/${callSid}.json`,'POST',{Status:'completed'});log('bridge.call_ended',{reason,callSid})}catch(error){log('bridge.call_end_failed',{reason,callSid,status:error.status||0,message:String(error.message||'unknown').slice(0,200)});phone.close(1011,'Unable to end call');return}sendLive({type:'session.close'});closeTimeout=setTimeout(()=>live?.terminate(),5000);phone.close()};
- const finishWhenAudioDrains=()=>{if(!endCallRequested||!closingAudioStarted||pendingOutput.length||marks.size)return;clearTimeout(finishHangupTimer);finishHangupTimer=setTimeout(()=>{if(!pendingOutput.length&&!marks.size)endTwilioCall('assistant_goodbye_finished')},1200)};
+ const finishWhenAudioDrains=()=>{if(!endCallRequested||!closingAudioStarted||playback?.pendingMs||playback?.queuedMs)return;clearTimeout(finishHangupTimer);finishHangupTimer=setTimeout(()=>{if(!playback?.pendingMs&&!playback?.queuedMs)endTwilioCall('assistant_goodbye_finished')},1200)};
  const requestCallEnd=(callId,reason)=>{if(endCallRequested||stopping)return;endCallRequested=true;log('bridge.end_call_requested',{reason,callSid});sendLive({type:'response.item.create',item:{type:'function_call_output',call_id:callId,output:JSON.stringify({status:'ending',instruction:'The phone system will end the call after your brief, friendly goodbye. Say it now and do not ask another question.'})}});sendLive({type:'response.create'});endFallbackTimer=setTimeout(()=>endTwilioCall('goodbye_timeout'),20000)};
- phone.on('error',error=>{log('bridge.twilio_socket_error',{message:String(error.message||'unknown').slice(0,240)});stop()});phone.on('close',(code,reason)=>{log('bridge.twilio_closed',{code,reason:reason.toString().slice(0,120),receivedMedia,sentInput,receivedOutput});stop()});
+ phone.on('error',error=>{log('bridge.twilio_socket_error',{message:String(error.message||'unknown').slice(0,240)});stop()});phone.on('close',(code,reason)=>{log('bridge.twilio_closed',{code,reason:reason.toString().slice(0,120),receivedMedia,sentInput,receivedOutput});if(streamStartedAt)log('bridge.call_timing',{callSid,firstInputMs:firstInputAt?firstInputAt-streamStartedAt:null,firstOutputMs:firstOutputAt?firstOutputAt-streamStartedAt:null,firstPlayedMs:firstPlayedAt?firstPlayedAt-streamStartedAt:null,inputTranscriptDeltas,outputTranscriptDeltas,interruptions,approxResponseGapMs:responseGaps,playback:playback?.summary()});stop()});
  phone.on('message',raw=>{try{
  const event=JSON.parse(raw.toString());
  if(event.event==='start'){
@@ -85,7 +86,7 @@ sockets.on('connection',phone=>{
  const data=JSON.parse(Buffer.from(context,'base64url').toString());
  for(const [k,expiration] of used)if(expiration<Date.now())used.delete(k);
  if(data.expires<Date.now()||used.has(p.signature))throw new Error('Expired or reused call context');used.set(p.signature,data.expires);
- streamSid=event.start.streamSid;callSid=event.start.callSid;clearTimeout(startupTimeout);log('bridge.twilio_stream_started',{callSid});
+ streamSid=event.start.streamSid;callSid=event.start.callSid;streamStartedAt=Date.now();playback=new VoicePlayback(sendPhone,streamSid);clearTimeout(startupTimeout);log('bridge.twilio_stream_started',{callSid});
  sessionReadyTimer=setTimeout(()=>{log('bridge.session_start_timeout',{callSid,receivedMedia,sentInput});phone.close(1011,'Voice session startup timed out');stop()},15000);
  live=new WebSocket('wss://api.openai.com/v1/live/sessions',{headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},handshakeTimeout:10000});
  live.on('open',()=>{
@@ -96,30 +97,45 @@ sockets.on('connection',phone=>{
  });
  live.on('message',raw=>{try{const e=JSON.parse(raw.toString());
  if(e.type==='session.started'){
- started=true;clearTimeout(sessionReadyTimer);
+ started=true;sessionStartedAt=Date.now();clearTimeout(sessionReadyTimer);
  firstOutputTimer=setTimeout(()=>{log('bridge.no_output_audio',{callSid,receivedMedia,sentInput,openingAccepted});phone.close(1011,'No voice audio received');stop()},20000);
  log('bridge.live_session_started',{sessionId:e.session?.id});
  const greeting=openingInstructions(data.agent,data.contact,data.objective,data.recording!==false,data.callPlan);
  sendLive({type:'session.instructions.append',event_id:'masscall-opening',delegation_id:null,content:greeting});
- for(const audio of inputQueue){sendLive({type:'session.input_audio.append',audio});if(!sentInput){sentInput=true;log('bridge.first_input_audio_sent',{queued:true})}}inputQueue=[];
+ for(const audio of inputQueue){sendLive({type:'session.input_audio.append',audio});if(!sentInput){sentInput=true;firstInputAt=Date.now();log('bridge.first_input_audio_sent',{queued:true})}}inputQueue=[];
  }
  if(e.type==='session.instructions.appended'&&e.client_event_id==='masscall-opening'){openingAccepted=true;log('bridge.opening_instructions_accepted',{callSid})}
+ if(e.type==='session.input_transcript.delta'){
+  const endMs=e.end_ms;
+  if(typeof e.delta==='string'&&e.delta.trim()&&typeof endMs==='number'&&Number.isFinite(endMs)){
+   inputTranscriptDeltas++;lastCallerTranscriptEndMs=Math.max(lastCallerTranscriptEndMs,endMs);pendingCallerEndMs=lastCallerTranscriptEndMs;
+   const now=Date.now();
+   if(shouldClearForTranscript({delta:e.delta,endMs,elapsedMs:now-sessionStartedAt,pendingMs:playback.pendingMs,queuedMs:playback.queuedMs,sinceLastClearMs:now-lastClearAt,ending:endCallRequested})){
+    const removed=playback.clear();lastClearAt=now;interruptions++;log('bridge.caller_interruption',{callSid,pendingMs:Math.round(removed.pendingMs),twilioQueuedMs:removed.twilioQueuedMs});
+   }
+  }
+ }
+ if(e.type==='session.output_transcript.delta'&&typeof e.delta==='string'&&e.delta.trim()&&typeof e.start_ms==='number'&&Number.isFinite(e.start_ms)){
+  outputTranscriptDeltas++;
+  if(pendingCallerEndMs>=0&&e.start_ms>=pendingCallerEndMs&&responseGaps.length<12){responseGaps.push(Math.round(e.start_ms-pendingCallerEndMs));pendingCallerEndMs=-1}
+ }
  if(e.type==='response.event'&&e.event?.type==='response.output_item.done'&&e.event.item?.type==='function_call'&&e.event.item.name==='end_call'){
   let args;try{args=JSON.parse(e.event.item.arguments||'{}')}catch{args={}}
   if(['goal_complete','caller_requested_end'].includes(args.reason)&&typeof e.event.item.call_id==='string')requestCallEnd(e.event.item.call_id,args.reason);
   else log('bridge.invalid_end_call_arguments',{callSid});
  }
- if(e.type==='session.output_audio.delta'){clearTimeout(firstOutputTimer);if(!receivedOutput){receivedOutput=true;log('bridge.first_output_audio_received')}if(endCallRequested){closingAudioStarted=true;clearTimeout(finishHangupTimer)}pendingOutput=Buffer.concat([pendingOutput,Buffer.from(e.delta,'base64')]);if(pendingOutput.length>80000){log('bridge.output_backlog_limit');phone.close(1011,'Audio backlog');stop()}}
+ if(e.type==='session.output_audio.delta'){clearTimeout(firstOutputTimer);if(!receivedOutput){receivedOutput=true;firstOutputAt=Date.now();log('bridge.first_output_audio_received')}if(endCallRequested){closingAudioStarted=true;clearTimeout(finishHangupTimer)}if(!playback.append(e.delta)){log('bridge.output_backlog_limit',{callSid,maxPendingMs:Math.round(playback.maxPendingMs)});phone.close(1011,'Audio backlog');stop()}}
  if(e.type==='session.closed'){clearTimeout(closeTimeout);live.close();phone.close();stop();}
  if(e.type==='error'){log('bridge.openai_session_error',{code:e.error?.code||'unknown',message:String(e.error?.message||'unknown').slice(0,240),eventId:e.error?.client_event_id});phone.close(1011,'Voice session error');stop()}
  }catch(error){log('bridge.openai_event_parse_error',{message:String(error.message||'unknown').slice(0,160)});phone.close(1011,'Invalid voice event');stop()}});
  live.on('error',error=>{log('bridge.openai_socket_error',{message:String(error.message||'unknown').slice(0,240)});phone.close(1011,'Voice service unavailable');stop()});
  live.on('close',(code,reason)=>{log('bridge.openai_closed',{code,reason:reason.toString().slice(0,120),started});clearTimeout(closeTimeout);phone.close();stop()});
- // Pace G.711 into 20 ms frames; marks bound the Twilio playback queue to 200 ms.
- // GPT-Live is full duplex. Do not apply Realtime speech-start cancellation heuristics.
- paceTimer=setInterval(()=>{if(!started||stopping||!pendingOutput.length||marks.size>=10)return;const frame=pendingOutput.subarray(0,160);pendingOutput=pendingOutput.subarray(frame.length);const mark=String(++markIndex);marks.add(mark);sendPhone({event:'media',streamSid,media:{payload:frame.toString('base64')}});sendPhone({event:'mark',streamSid,mark:{name:mark}})},20);
- }else if(event.event==='media'&&event.media?.payload){if(!receivedMedia){receivedMedia=true;log('bridge.first_twilio_audio_received')}if(started&&!stopping){sendLive({type:'session.input_audio.append',audio:event.media.payload});if(!sentInput){sentInput=true;log('bridge.first_input_audio_sent',{queued:false})}}else if(inputQueue.length<100)inputQueue.push(event.media.payload)}
- else if(event.event==='mark'){marks.delete(event.mark?.name);finishWhenAudioDrains()}
+ // Pace G.711 into 20 ms frames; marks bound Twilio's queue to 200 ms.
+ // GPT-Live handles its own speech generation; recent caller transcripts only
+ // clear audio that is still waiting in this bridge or in Twilio's playback queue.
+ paceTimer=setInterval(()=>{if(started&&!stopping)playback.tick()},20);
+ }else if(event.event==='media'&&event.media?.payload){if(!receivedMedia){receivedMedia=true;log('bridge.first_twilio_audio_received')}if(started&&!stopping){sendLive({type:'session.input_audio.append',audio:event.media.payload});if(!sentInput){sentInput=true;firstInputAt=Date.now();log('bridge.first_input_audio_sent',{queued:false})}}else if(inputQueue.length<100)inputQueue.push(event.media.payload)}
+ else if(event.event==='mark'){if(playback?.acknowledge(event.mark?.name)&&!firstPlayedAt)firstPlayedAt=Date.now();finishWhenAudioDrains()}
  else if(event.event==='stop'){stop();phone.close()}
  }catch(error){log('bridge.twilio_message_rejected',{message:String(error.message||'unknown').slice(0,200)});phone.close(1008,'Invalid stream');stop()}});
 });

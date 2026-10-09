@@ -17,6 +17,8 @@ test('GPT-Live session applies the selected voice, Responses model, reasoning an
  assert.match(session.instructions,/# Delegation policy/);
  assert.match(session.instructions,/Delegate to the backend when/);
  assert.match(session.instructions,/Do not delegate to the backend when/);
+ assert.match(session.instructions,/Ask one question at a time/);
+ assert.match(session.instructions,/If they say you are slow to respond/);
 });
 
 test('GPT-Live omits optional reasoning and web search unless selected but always provides call control',()=>{
@@ -36,6 +38,7 @@ test('opening instruction asks the live agent to speak immediately with natural 
  assert.ok(!prompt.includes('{first_name}'));
  assert.match(prompt,/pause and listen/);
  assert.match(prompt,/Do not recite the introduction and opening as separate scripts/);
+ assert.match(prompt,/at most one simple question/);
 });
 
 test('live call language instruction covers the configured goodbye too',()=>{
