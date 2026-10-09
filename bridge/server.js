@@ -25,7 +25,7 @@ async function livekitWorkerReady(){
 }
 const server=http.createServer(async(req,res)=>{
  const pathname=new URL(req.url,'http://localhost').pathname;
- if(req.method==='GET'&&pathname==='/health')return reply(res,200,{status:'ok'});
+ if(req.method==='GET'&&pathname==='/health')return reply(res,200,{status:'ok',version:process.env.RENDER_GIT_COMMIT?.slice(0,7)||'local'});
  if(req.method==='GET'&&pathname==='/livekit-health'){const ready=await livekitWorkerReady();return reply(res,ready?200:503,{ready,agentName:livekitAgentName()})}
  if(req.method!=='POST'||!['/prompts','/rehearsal'].includes(pathname))return reply(res,404,{error:'Not found.'});
  if(!equal(req.headers.authorization,`Bearer ${process.env.VOICE_BRIDGE_SECRET}`))return reply(res,401,{error:'Authentication required.'});
