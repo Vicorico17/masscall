@@ -31,3 +31,41 @@ test('verified demo call uses a fixed Romanian agent, owned caller ID and no rec
   const context=[...created.get('Twiml').matchAll(/name="context\d+" value="([^"]+)"/g)].map(match=>match[1]).join('');const data=JSON.parse(Buffer.from(context,'base64url').toString());assert.equal(data.agent.name,'Andreea');assert.doesNotMatch(data.objective,/Ignore the demo/);
  }finally{globalThis.fetch=originalFetch}
 });
+test('demo uses existing credentials without requiring Turnstile or a manually created Verify service',async()=>{
+ env();delete process.env.TWILIO_VERIFY_SERVICE_SID;delete process.env.DEMO_FROM_NUMBER;delete process.env.TURNSTILE_SECRET_KEY;delete process.env.TURNSTILE_SITE_KEY;
+ let serviceCreated=0,sms=0,callCreated=0;const cache=new Map();
+ globalThis.fetch=async(url,options={})=>{
+  const target=String(url);
+  if(target.includes('redis.example.com')){
+   const [cmd,key,value]=JSON.parse(options.body);
+   if(cmd==='GET')return Response.json({result:cache.get(key)||null});
+   if(cmd==='SET'){cache.set(key,value);return Response.json({result:'OK'})}
+   return Response.json({result:1});
+  }
+  if(target.includes('Services?'))return Response.json({services:[]});
+  if(target.endsWith('/Services')){serviceCreated++;return Response.json({sid:'VA'+'4'.repeat(32)})}
+  if(target.includes('/Verifications')){sms++;return Response.json({status:'pending'})}
+  if(target.includes('/VerificationCheck'))return Response.json({status:options.body.get('Code')==='123456'?'approved':'pending'});
+  if(target.includes('/IncomingPhoneNumbers.json'))return Response.json({incoming_phone_numbers:[{phone_number:'+14155550123',capabilities:{voice:true}}]});
+  if(target==='https://bridge.example.com/health')return Response.json({status:'ok'});
+  if(target.includes('/Calls.json')){callCreated++;assert.equal(options.body.get('From'),'+14155550123');return Response.json({sid:'CA'+'5'.repeat(32),status:'queued'})}
+  throw new Error('Unexpected fetch '+target);
+ };
+ try{
+  assert.equal((await request('config',{},'GET')).data.enabled,true);
+  assert.equal((await request('start',{phone:'+40712345678',consent:true})).status,200);
+  assert.equal(sms,1);assert.equal(callCreated,0);
+  assert.equal((await request('call',{phone:'+40712345678',code:'000000',consent:true})).status,400);assert.equal(callCreated,0);
+  assert.equal((await request('call',{phone:'+40712345678',code:'123456',consent:true})).status,201);
+  assert.equal(serviceCreated,1);assert.equal(callCreated,1);
+ }finally{globalThis.fetch=originalFetch;env()}
+});
+test('verification limit blocks SMS and service creation, and partially configured Turnstile fails closed',async()=>{
+ env();delete process.env.TURNSTILE_SITE_KEY;
+ let fetched=0;globalThis.fetch=async()=>{fetched++;return Response.json({result:0})};
+ try{
+  assert.equal((await request('start',{phone:'+40712345678',consent:true})).status,403);assert.equal(fetched,0);
+  delete process.env.TURNSTILE_SECRET_KEY;
+  assert.equal((await request('start',{phone:'+40712345678',consent:true})).status,429);assert.equal(fetched,1);
+ }finally{globalThis.fetch=originalFetch;env()}
+});
