@@ -69,3 +69,19 @@ test('verification limit blocks SMS and service creation, and partially configur
   assert.equal((await request('start',{phone:'+40712345678',consent:true})).status,429);assert.equal(fetched,1);
  }finally{globalThis.fetch=originalFetch;env()}
 });
+
+test('bridge failure does not consume the SMS code or place a call',async()=>{
+ env();let verificationChecks=0,calls=0;
+ globalThis.fetch=async url=>{
+  const target=String(url);
+  if(target==='https://bridge.example.com/health')return Response.json({status:'starting'},{status:503});
+  if(target.includes('VerificationCheck'))verificationChecks++;
+  if(target.includes('Calls.json'))calls++;
+  throw new Error('Unexpected request '+target);
+ };
+ try{
+  assert.equal((await request('ready',{},'GET')).status,503);
+  const result=await request('call',{phone:'+40712345678',code:'123456',consent:true});
+  assert.equal(result.status,503);assert.equal(verificationChecks,0);assert.equal(calls,0);
+ }finally{globalThis.fetch=originalFetch}
+});
