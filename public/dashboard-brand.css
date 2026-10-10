@@ -30,3 +30,22 @@ body.call-center .live-workspace-layout{display:block}.live-menu-slot .live-work
 @media(max-width:700px){.experience-choices,.experience-tasks{grid-template-columns:1fr}.experience-choice{padding:25px}.experience-choice strong{font-size:25px}.experience-next{display:block}.experience-metrics{gap:8px}.experience-metrics button{padding:13px}.experience-metrics span{font-size:11px}.experience-section-title>span{display:none}.experience-call{align-items:flex-start;flex-direction:column}.experience-intro h1{letter-spacing:-1px}.experience-intro{padding-top:12px}.experience-switch{max-width:100%}}
 
 body[data-live-panel=home] #main>.page-head,body[data-live-panel=home] #main>.notice{display:none}body[data-live-panel=home] .experience-intro{padding-top:10px}
+
+/* First-call guidance, shared by both experiences. */
+.onboarding-guide{margin:28px 0;padding:24px;border:1px solid var(--line,#ddd);border-radius:20px;background:#f8f8f3}
+.onboarding-steps{list-style:none;padding:0;margin:20px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.onboarding-steps li{display:flex;gap:12px;align-items:flex-start}
+.onboarding-step-number{display:grid;place-items:center;flex-shrink:0;width:30px;height:30px;border:1px solid #c7ccbf;border-radius:50%;font-size:13px;font-weight:700}
+.onboarding-steps h3{font-size:16px;margin:4px 0 8px}.onboarding-steps p{font-size:14px;line-height:1.6;color:#536052;margin:0 0 12px}
+.onboarding-steps .is-done .onboarding-step-number{background:#234b34;color:white;border-color:#234b34}
+#modal-content .experience-intro h1{font-size:32px}#modal-content .experience-choices{gap:12px}#modal-content .experience-choice{padding:22px;min-height:0}#modal-content .experience-choice strong{font-size:23px}
+@media(max-width:700px){.onboarding-steps{grid-template-columns:1fr;gap:20px}.onboarding-guide{padding:18px}.onboarding-guide .experience-section-title{align-items:flex-start;gap:8px}.onboarding-guide h2{font-size:21px}#modal-content .experience-choices{grid-template-columns:1fr}#modal-content .experience-intro h1{font-size:26px}}
+
+.onboarding-welcome .experience-intro h1,.onboarding-welcome .experience-kicker,.onboarding-welcome .experience-symbol{display:none}
+#modal-content .onboarding-welcome .experience-intro{margin:0 0 20px;padding:0}
+#modal-content .onboarding-welcome .experience-intro p{margin:0;font-size:15px}
+#modal-content .onboarding-welcome .experience-choice .experience-kicker{display:block}
+#modal-content .onboarding-welcome .experience-choice{gap:12px;padding:18px}
+#modal-content .onboarding-welcome .experience-choice strong{font-size:21px}
+#modal-content .onboarding-welcome .experience-choice>span:not(.experience-kicker){font-size:14px}
+#modal-content .onboarding-welcome .experience-footnote{margin:16px 0 0;font-size:12px}
