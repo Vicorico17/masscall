@@ -89,7 +89,7 @@ export default defineAgent({
     log('livekit.gpt_live_session_started', { room: ctx.room.name, model: sessionConfig.model, voice: sessionConfig.audio.output.voice });
 
     await session.generateReply({
-      instructions: openingInstructions(call.agent, call.contact, call.objective, call.recording, call.callPlan)
+      instructions: openingInstructions()
     });
   }
 });

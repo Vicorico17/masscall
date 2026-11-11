@@ -110,7 +110,7 @@ sockets.on('connection',phone=>{
  started=true;sessionStartedAt=Date.now();clearTimeout(sessionReadyTimer);
  firstOutputTimer=setTimeout(()=>{log('bridge.no_output_audio',{callSid,receivedMedia,sentInput,openingAccepted});phone.close(1011,'No voice audio received');stop()},20000);
  log('bridge.live_session_started',{sessionId:e.session?.id});
- const greeting=openingInstructions(data.agent,data.contact,data.objective,data.recording!==false,data.callPlan);
+ const greeting=openingInstructions();
  sendLive({type:'session.instructions.append',event_id:'masscall-opening',delegation_id:null,content:greeting});
  for(const audio of inputQueue){sendLive({type:'session.input_audio.append',audio});if(!sentInput){sentInput=true;firstInputAt=Date.now();log('bridge.first_input_audio_sent',{queued:true})}}inputQueue=[];
  }

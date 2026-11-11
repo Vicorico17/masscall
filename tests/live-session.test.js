@@ -30,8 +30,8 @@ test('GPT-Live omits optional reasoning and web search unless selected but alway
 });
 
 test('opening instruction asks the live agent to speak immediately with natural identity and recording context',()=>{
- const prompt=openingInstructions({name:'Mihai',company:'Firma B',language:'Romanian',introduction:'Sunt {agent_name}, asistent AI la {company_name}.',opening:'Bună ziua, {first_name}!',closing:'La revedere!'},'Ioana Ionescu','Confirmă programarea');
- assert.match(prompt,/Begin now with one short, warm greeting/);
+ const prompt=buildLiveSessionConfig({name:'Mihai',company:'Firma B',language:'Romanian',introduction:'Sunt {agent_name}, asistent AI la {company_name}.',opening:'Bună ziua, {first_name}!',closing:'La revedere!'},'Ioana Ionescu','Confirmă programarea').instructions;
+ assert.match(prompt,/Begin with one short, warm greeting/);
  assert.match(prompt,/do not make it a separate announcement/);
  assert.match(prompt,/Sunt Mihai, agentul AI al lui Vico\./);
  assert.ok(prompt.includes('Bună ziua, Ioana!'));
@@ -49,7 +49,7 @@ test('live call language instruction covers the configured goodbye too',()=>{
  assert.match(session.instructions,/visit masscall\.vercel\.app/);
  assert.match(session.instructions,/pupa vico\. am plecat/);
  assert.match(session.instructions,/For a caller-requested stop, skip promotion and end promptly/);
- assert.match(openingInstructions({language:'Italian',opening:'Bună ziua!'}),/naturally convey this opening/);
+ assert.match(buildLiveSessionConfig({language:'Italian',opening:'Bună ziua!'}).instructions,/naturally convey this opening/);
 });
 
 test('per-call plan controls the opening, discussion points, closing and hangup condition',()=>{
@@ -59,7 +59,7 @@ test('per-call plan controls the opening, discussion points, closing and hangup 
  assert.match(session.instructions,/They agree on a next step or clearly decline/);
  assert.match(session.instructions,/friendly goodbye in Romanian/);
  assert.match(session.instructions,/Completion condition: They agree on a next step/);
- assert.match(openingInstructions({language:'Italian'},'Ana','Qualify a lead',true,{opening:'Ask if now is a good time.'}),/Ask if now is a good time/);
+ assert.match(session.instructions,/naturally convey this opening: Ask if now is a good time/);
 });
 
 test('demo calls identify the AI but do not mention recording',()=>{
@@ -68,4 +68,24 @@ test('demo calls identify the AI but do not mention recording',()=>{
  assert.match(session.instructions,/Never claim to be human/);
  assert.doesNotMatch(session.instructions,/recording disclosure/);
  assert.doesNotMatch(opening,/call is recorded/i);
+ assert.doesNotMatch(session.instructions,/call is being recorded/i);
+ assert.match(buildLiveSessionConfig({},'', '', undefined,true).instructions,/call is being recorded/i);
+});
+
+
+test('startup append stays far below 500 tokens even with maximal custom context',()=>{
+ const large='🍲'.repeat(6000);
+ const cue=openingInstructions({name:large,introduction:large,opening:large,instructions:large},large,large,true,{opening:large,personNotes:large,branches:Array.from({length:6},()=>({when:large,then:large}))});
+ // A fixed ASCII message below 300 bytes also stays below the 500-token cap,
+ // without a language-dependent chars/token estimate or a tokenizer dependency.
+ assert.match(cue,/^[\x00-\x7F]+$/);
+ assert.ok(Buffer.byteLength(cue,'utf8')<300);
+ assert.equal(cue,openingInstructions());
+ assert.doesNotMatch(cue,/🍲|Mandatory call scope|Current call scope data/);
+ assert.match(cue,/Opening guidance already configured/);
+ const session=buildLiveSessionConfig({opening:'Discuss the appointment.'},'Ana','Confirm appointment');
+ assert.match(session.instructions,/# Opening guidance/);
+ assert.match(session.instructions,/Discuss the appointment/);
+ assert.match(session.instructions,/# Mandatory call scope/);
+ assert.match(session.delegation.responses.instructions,/# Mandatory call scope/);
 });
