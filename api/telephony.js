@@ -75,7 +75,9 @@ export default async function handler(req,res){
  }
  if(action==='hangup'){
  if(!/^CA[0-9a-f]{32}$/i.test(body.call||''))return json(res,400,{error:'Invalid call ID'});
- return json(res,200,await twilio(`Calls/${body.call}.json`,'POST',{Status:'completed'}));
+ const resource=`Calls/${body.call}.json`,call=await twilio(resource);
+ if(!['queued','initiated','ringing','in-progress'].includes(call.status))return json(res,200,call);
+ return json(res,200,await twilio(resource,'POST',{Status:call.status==='in-progress'?'completed':'canceled'}));
  }
  return json(res,404,{error:'Unknown action.'});
  }catch(error){return json(res,error.status>=400&&error.status<600?error.status:502,{error:error.message||'Provider request failed.'})}

@@ -2,6 +2,7 @@ import { ServerOptions, cli, defineAgent, tool, voice } from '@livekit/agents';
 import * as openai from '@livekit/agents-plugin-openai';
 import { LiveKitAPI } from 'livekit-server-sdk';
 import { fileURLToPath } from 'node:url';
+import { createCallEnding, closingInstructions } from '../lib/call-ending.js';
 import { parseLiveKitCallContext } from '../lib/livekit-telephony.js';
 import { buildLiveSessionConfig, openingInstructions } from '../lib/live-session.js';
 
@@ -22,19 +23,22 @@ export default defineAgent({
       }
     };
     const api = new LiveKitAPI();
-    let endRequested = false;
-    let endSpeechStarted = false;
-    let ending = false;
-    let endFallback;
-
+    let speaking = false;
     const disconnectAfterGoodbye = async (reason) => {
-      if (ending) return;
-      ending = true;
-      clearTimeout(endFallback);
       log('livekit.call_end_room_delete', { room: ctx.room.name, reason });
-      try { await api.room.deleteRoom(ctx.room.name); }
-      catch (error) { log('livekit.call_end_room_delete_failed', { message: String(error?.message || 'unknown').slice(0, 180) }); }
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try { await api.room.deleteRoom(ctx.room.name); return; }
+        catch (error) {
+          log('livekit.call_end_room_delete_failed', { attempt, message: String(error?.message || 'unknown').slice(0, 180) });
+          if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      // A failed room deletion must not leave the phone participant connected.
+      try { await api.room.removeParticipant(ctx.room.name, call.participantIdentity); }
+      catch (error) { log('livekit.call_end_participant_remove_failed', { message: String(error?.message || 'unknown').slice(0, 180) }); }
     };
+    const ending = createCallEnding({ finish: disconnectAfterGoodbye, isPlaybackEmpty: () => !speaking });
+    ctx.addShutdownCallback(async () => ending.dispose());
 
     const endCall = tool({
       name: 'end_call',
@@ -47,10 +51,8 @@ export default defineAgent({
       },
       execute: async ({ reason }) => {
         if (!['goal_complete', 'caller_requested_end'].includes(reason)) return 'Invalid end reason. Continue the conversation.';
-        endRequested = true;
-        endFallback = setTimeout(() => disconnectAfterGoodbye('goodbye_timeout'), 10000);
-        log('livekit.end_call_requested', { room: ctx.room.name, reason });
-        return 'The call will end after your next brief, friendly goodbye. Say the goodbye now in the selected language, then stop speaking.';
+        if (ending.request()) log('livekit.end_call_requested', { room: ctx.room.name, reason });
+        return closingInstructions(reason);
       }
     });
     const tools = [endCall];
@@ -63,11 +65,16 @@ export default defineAgent({
     });
     const session = new voice.AgentSession();
     session.on(voice.AgentSessionEventTypes.AgentStateChanged, (event) => {
-      if (endRequested && event.newState === 'speaking') endSpeechStarted = true;
-      if (endRequested && endSpeechStarted && event.oldState === 'speaking' && event.newState !== 'speaking') {
-        setTimeout(() => disconnectAfterGoodbye('goodbye_finished'), 900);
+      speaking = event.newState === 'speaking';
+      if (speaking) ending.audioStarted();
+      ending.playbackChanged();
+    });
+    session.on(voice.AgentSessionEventTypes.ConversationItemAdded, ({ item }) => {
+      if (item.role === 'assistant' && !item.interrupted && ending.assistantTranscript(item.textContent || '')) {
+        log('livekit.end_call_signature_fallback', { room: ctx.room.name });
       }
     });
+    session.on(voice.AgentSessionEventTypes.Close, () => ending.dispose());
     session.on(voice.AgentSessionEventTypes.MetricsCollected, (event) => {
       log('livekit.agent_metrics', { room: ctx.room.name, metrics: event.metrics });
     });

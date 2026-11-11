@@ -17,3 +17,14 @@ test('call connects to the voice bridge and speaks a fallback only after the str
   assert.equal(data.recording,true);
  }
 });
+
+test('simultaneous identical calls have different replay-protected contexts',t=>{
+ t.mock.method(Date,'now',()=>1800000000000);
+ const options={bridge:'wss://bridge.example.com/media',secret:'test-secret',agent:{},objective:'Confirm appointment',recording:true};
+ const calls=Array.from({length:10},()=>buildCallTwiml(options));
+ const signatures=calls.map(xml=>xml.match(/name="signature" value="([^"]+)"/)[1]);
+ assert.equal(new Set(signatures).size,10);
+ const contexts=calls.map(xml=>JSON.parse(Buffer.from([...xml.matchAll(/name="context\d+" value="([^"]+)"/g)].map(m=>m[1]).join(''),'base64url').toString()));
+ assert.equal(new Set(contexts.map(context=>context.expires)).size,1);
+ assert.equal(new Set(contexts.map(context=>context.nonce)).size,10);
+});

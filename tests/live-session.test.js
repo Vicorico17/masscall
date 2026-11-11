@@ -46,8 +46,9 @@ test('live call language instruction covers the configured goodbye too',()=>{
  assert.match(session.instructions,/Speak only in Romanian throughout the call/);
  assert.match(session.instructions,/friendly goodbye in Romanian/);
  assert.match(session.instructions,/Andreea, Vico's AI agent/);
- assert.doesNotMatch(session.instructions,/visit masscall\.vercel\.app/);
- assert.match(session.instructions,/For a caller-requested stop, end promptly/);
+ assert.match(session.instructions,/visit masscall\.vercel\.app/);
+ assert.match(session.instructions,/pupa vico\. am plecat/);
+ assert.match(session.instructions,/For a caller-requested stop, skip promotion and end promptly/);
  assert.match(openingInstructions({language:'Italian',opening:'Bună ziua!'}),/naturally convey this opening/);
 });
 

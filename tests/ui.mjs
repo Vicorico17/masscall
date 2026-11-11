@@ -1,6 +1,7 @@
-import {chromium} from '@playwright/test';
+import {chromium,expect} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
+const baseURL=process.env.MASSCALL_TEST_URL||'http://localhost:3000';
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||undefined});
 const page=await browser.newPage({viewport:{width:1280,height:1000}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -20,7 +21,7 @@ try{
   else if(action==='hangup'){status='completed';data={sid,status}}
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
  });
- await page.goto('http://localhost:3000/dashboard');
+ await page.goto(baseURL+'/dashboard');
  await page.locator('#owner-token').fill('invalid-workspace-token-12345');
  await page.locator('#owner-login button[type=submit]').click();
  await page.getByText('Codul de acces este invalid.',{exact:true}).waitFor();
@@ -90,10 +91,66 @@ try{
  await page.locator('.live-workspace-menu [data-panel=max]').click();
  assert.equal(await page.locator('#mobile-menu-toggle').getAttribute('aria-expanded'),'false');
  assert.equal(await page.locator('#call-setup-title').innerText(),'MAX SETTINGS');
+ await page.setViewportSize({width:1280,height:1000});
+  // Hold both dial responses until both requests arrive: sequential dialing would fail.
+  const parallelRequests=[], pendingDials=[], parallelStatuses=new Map();
+  let partialFailure=false;
+  await page.route('**/api/telephony?action=call', async route => {
+    const body=route.request().postDataJSON(); parallelRequests.push(body);
+    if(partialFailure && body.to.endsWith('101')) {
+      await route.fulfill({status:403,contentType:'application/json',body:JSON.stringify({error:'Test destination denied'})}); return;
+    }
+    const sid='CA'+(body.to.endsWith('101')?'d':'e').repeat(32);
+    parallelStatuses.set(sid,'in-progress');
+    if(!partialFailure) await new Promise(resolve=>pendingDials.push(resolve));
+    await route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({sid,status:'queued'})});
+  });
+  await page.route('**/api/telephony?action=call-status&call=*', route => {
+    const sid=new URL(route.request().url()).searchParams.get('call');
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sid,status:parallelStatuses.get(sid),duration:10})});
+  });
+  await page.route('**/api/telephony?action=hangup', route => {
+    const {call}=route.request().postDataJSON(); parallelStatuses.set(call,'completed');
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sid:call,status:'completed',duration:10})});
+  });
+  await page.getByRole('button',{name:'Test două apeluri',exact:true}).click();
+  await page.getByLabel('Primul număr de telefon').fill('+40700000101');
+  await page.getByLabel('Al doilea număr de telefon').fill('+40700000101');
+  await page.getByLabel('Am acordul pentru a apela și înregistra ambele persoane.').check();
+  await page.getByRole('button',{name:'Pornește ambele apeluri',exact:true}).click();
+  await expect(page.locator('#parallel-error')).toHaveText('Folosește două numere de telefon diferite.');
+  assert.equal(parallelRequests.length,0);
+  await page.getByLabel('Al doilea număr de telefon').fill('+40700000102');
+  await page.getByRole('button',{name:'Pornește ambele apeluri',exact:true}).click();
+  await expect.poll(()=>parallelRequests.length).toBe(2);
+  await expect(page.getByRole('button',{name:'Pornește ambele apeluri',exact:true})).toBeDisabled();
+  pendingDials.forEach(resolve=>resolve());
+  await expect(page.locator('#parallel-overlap')).toHaveText('Ambele apeluri au fost observate în desfășurare simultan.',{timeout:10000});
+  assert.equal(parallelRequests[0].agent.voice,'gleam');
+  assert.equal(parallelRequests[1].agent.language,'Romanian');
+  assert.equal(parallelRequests[0].contact,'');
+  assert.equal(parallelRequests[1].callPlan.personNotes,'');
+  await page.getByRole('button',{name:'CALL',exact:true}).click();
+  await page.getByRole('button',{name:'Test două apeluri',exact:true}).click();
+  await page.locator('[data-stop-parallel="0"]').click();
+  await expect(page.locator('.parallel-call-result').nth(0).locator('.tag')).toHaveText('Apel încheiat');
+  await expect(page.locator('.parallel-call-result').nth(1).locator('.tag')).toHaveText('Apel conectat');
+  await page.locator('[data-stop-parallel="1"]').click();
+  await expect(page.getByRole('button',{name:'Pornește ambele apeluri',exact:true})).toBeEnabled();
+  partialFailure=true;
+  await page.getByRole('button',{name:'Pornește ambele apeluri',exact:true}).click();
+  await expect(page.locator('.parallel-call-result').nth(0).locator('.tag')).toHaveText('Respins');
+  await expect(page.locator('.parallel-call-result').nth(1).locator('.tag')).toHaveText('Apel conectat',{timeout:10000});
+  await page.locator('[data-stop-parallel="1"]').click();
+  await expect(page.getByRole('button',{name:'Pornește ambele apeluri',exact:true})).toBeEnabled();
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:'/tmp/masscall-parallel-mobile.png',fullPage:true});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+
  assert.deepEqual(errors,[]);
  console.log('PASS: Romanian UI, CALL and MAX SETTINGS, template selection, call overrides, status polling, hangup, mobile layout.');
- await page.goto('http://localhost:3000/studio');assert.equal(new URL(page.url()).pathname,'/dashboard');await page.locator('#owner-token').waitFor();
- await page.goto('http://localhost:3000/demo.html');assert.equal(new URL(page.url()).pathname,'/');await page.locator('#demo-form').waitFor();
+ await page.goto(baseURL+'/studio');assert.equal(new URL(page.url()).pathname,'/dashboard');await page.locator('#owner-token').waitFor();
+ await page.goto(baseURL+'/demo.html');assert.equal(new URL(page.url()).pathname,'/');await page.locator('#demo-form').waitFor();
  assert.equal(await page.getByRole('heading',{name:'Apeluri AI, în română.'}).count(),1);
  assert.ok(await page.locator('.hero-art img').evaluate(image=>image.complete&&image.naturalWidth>0),'Brand mascot loads');
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Landing page fits mobile viewport');
